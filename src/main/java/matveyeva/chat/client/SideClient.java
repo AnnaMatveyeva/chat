@@ -34,6 +34,7 @@ public class SideClient {
                 socket.close();
                 input.close();
                 output.close();
+                System.exit(0);
             }
         } catch (IOException ignored) {}
     }
@@ -68,6 +69,7 @@ public class SideClient {
                         SideClient.this.shutdown();
                     }
                     System.out.println(message);
+
                 }
             } catch (IOException e) {
                 SideClient.this.shutdown();

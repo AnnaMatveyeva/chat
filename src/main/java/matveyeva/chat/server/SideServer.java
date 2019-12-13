@@ -55,35 +55,39 @@ public class SideServer extends Thread{
                             send("Enter username");
                             String name = input.readLine();
                             User user;
-                            if((user = crud.findByName(name)) != null){
+
+                            if((user = crud.findByName(name)) != null) {
                                 send(user.getName() + " is " + user.getStatus());
                             } else send("User " + name + " not found");
                             break;
                         case 4:
                             showUsers();
-
                             break;
                         case 5:
                             send("Enter username");
                             String username = input.readLine();
                             User us;
-                            if((us = crud.findByName(username)) != null){
+                            if((us = crud.findByName(username)) != null) {
                                 send("Enter a message");
                                 //отправить сообщени найденному пользователю
                             } else send("User " + username + " not found");
+
                             break;
                         case 6:
                             check = true;
                             break start;
                         case 7:
+                            this.user.setStatus(User.Status.OFFLINE);
+                            System.out.println(this.user.getStatus());
                             send("exit");
+                            crud.reloadUsers();
                             this.shutdown();
                             check = true;
                     }
                 }
 
             }
-        }catch (IOException | InvalidUserException ex){
+        }catch (IOException ex){
             this.shutdown();
         }
     }
@@ -151,14 +155,22 @@ public class SideServer extends Thread{
                         String namePass = input.readLine();
                         if(!login(namePass)) {
                             send("Incorrect user data");
-                        } else check = true;
+                        } else {
+                            this.user.setStatus(User.Status.ONLINE);
+                            System.out.println(this.user.getStatus());
+                            check = true;
+                        }
                         break;
                     case 2:
                         send("Create new  username,password");
                         String newUser = input.readLine();
                         if(!registration(newUser)) {
                             send("Incorrect user data");
-                        } else check = true;
+                        } else {
+                            this.user.setStatus(User.Status.ONLINE);
+                            System.out.println(this.user.getStatus());
+                            check = true;
+                        }
                         break;
                     case 3:
                         send("exit");
@@ -167,7 +179,7 @@ public class SideServer extends Thread{
                         break;
                 }
             }catch (NumberFormatException ex){
-                continue;
+
             }
         }
     }

@@ -10,7 +10,7 @@ public class User implements Serializable {
     private String role;
     private Status status;
 
-    enum Status{
+    public enum Status{
         BANNED,
         ONLINE,
         OFFLINE;
@@ -19,7 +19,7 @@ public class User implements Serializable {
         this.name = name;
         this.password = password;
         this.role = "USER";
-        this.status = Status.ONLINE;
+
     }
     public String getName() {
         return name;

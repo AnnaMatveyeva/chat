@@ -54,11 +54,11 @@ public class UserCrud {
         }
     }
 
-    public User findByName(String name) throws InvalidUserException {
+    public User findByName(String name) {
         for(User user : users){
             if(user.getName().equals(name)) {
                 return user;
-            }else throw new InvalidUserException("Incorrect user name");
+            }
         }
         return null;
     }
@@ -85,6 +85,11 @@ public class UserCrud {
             out.writeObject(user);
         }
         fileOutputStream.close();
+        try {
+            loadUsers();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private User split(String str) throws InvalidUserException {
