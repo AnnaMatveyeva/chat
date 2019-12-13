@@ -4,6 +4,7 @@ import matveyeva.chat.exception.InvalidUserException;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 
 public class UserCrud {
@@ -67,6 +68,7 @@ public class UserCrud {
     }
 
     private void loadUsers() throws Exception {
+        users = new HashSet<User>();
         FileInputStream fileInputStream = new FileInputStream(new File("users.ser"));
         while (fileInputStream.available() > 0) {
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);

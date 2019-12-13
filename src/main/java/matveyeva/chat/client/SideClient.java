@@ -45,10 +45,9 @@ public class SideClient {
             while (true) {
                 String message;
                 try {
-                    message = scanner.next();
-                    output.write(message);
+                    message = scanner.nextLine();
+                    output.write(message+ "\n");
                     output.flush();
-                    System.out.println("wrote smth");
                 } catch (IOException e) {
                     SideClient.this.shutdown();
                 }

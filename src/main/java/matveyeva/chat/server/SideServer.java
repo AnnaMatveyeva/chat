@@ -36,8 +36,11 @@ public class SideServer extends Thread{
                 boolean check = false;
                 while(!check) {
                     send("to public chat | too rooms | find user | see all users | send message to.. | logoff | exit");
-                    switch (Integer.parseInt(input.readLine())) {
+
+                    String answer = input.readLine();
+                    switch (Integer.parseInt(answer)) {
                         case 1:
+                            send("Redirect to chat");
                             //переходит к чату
                             check = true;
                             break;
@@ -56,6 +59,7 @@ public class SideServer extends Thread{
                             for(User u : crud.findAll()){
                                 send(u.getName() + " is " + u.getStatus());
                             }
+                            break;
                         case 5:
                             send("Enter username");
                             String username = input.readLine();
@@ -73,8 +77,9 @@ public class SideServer extends Thread{
                             check = true;
                     }
                 }
+
             }
-        }catch (IOException | InvalidUserException ex){
+        }catch (IOException | InvalidUserException | InterruptedException ex){
             this.shutdown();
         }
     }
@@ -112,13 +117,13 @@ public class SideServer extends Thread{
         return (user = crud.create(newUser)) != null;
     }
 
-    private void startMenu() throws IOException {
+    private void startMenu() throws IOException, InterruptedException {
         boolean check = false;
         while(!check) {
 
             send("login | registration | exit");
-
-            switch (Integer.parseInt(input.readLine())) {
+            String answer = input.readLine();
+            switch (Integer.parseInt(answer)) {
                 case 1:
                     send("Enter username,password");
                     String namePass = input.readLine();
@@ -139,6 +144,7 @@ public class SideServer extends Thread{
                     check = true;
                     break;
             }
+
         }
     }
     private void sendToAll(String message){
@@ -146,4 +152,5 @@ public class SideServer extends Thread{
             ss.send(message);
         }
     }
+
 }

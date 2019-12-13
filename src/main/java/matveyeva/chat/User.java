@@ -1,12 +1,9 @@
 package matveyeva.chat;
 
-import matveyeva.chat.exception.InvalidUserException;
-
+import java.io.Serializable;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-public class User {
+public class User implements Serializable {
 
     private String name;
     private String password;
@@ -22,7 +19,7 @@ public class User {
         this.name = name;
         this.password = password;
         this.role = "USER";
-        this.status = Status.OFFLINE;
+        this.status = Status.ONLINE;
     }
     public String getName() {
         return name;
@@ -67,12 +64,7 @@ public class User {
         return Objects.hash(name);
     }
 
-    public boolean isUserValid() throws InvalidUserException {
-        Pattern pattern = Pattern.compile("^[a-zA-Z0-9-]{3,15}$");
-        Matcher matcherN = pattern.matcher(name);
-        Matcher matcherP = pattern.matcher(password);
-        if(matcherN.matches() && matcherP.matches()){
-            return true;
-        }else throw new InvalidUserException("incorrect user data");
+    public boolean isUserValid(){
+        return true;
     }
 }
