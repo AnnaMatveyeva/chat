@@ -3,12 +3,14 @@ package matveyeva.chat.server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Server {
 
     public static final int PORT = 8080;
-    public static LinkedList<SideServer> serverList = new LinkedList<>();
+    public static List<SideServer> serverList = new ArrayList<>();
+
 
     public static void main(String[] args) throws IOException {
         ServerSocket server = new ServerSocket(PORT);

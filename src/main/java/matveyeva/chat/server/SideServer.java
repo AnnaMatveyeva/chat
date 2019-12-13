@@ -6,6 +6,7 @@ import matveyeva.chat.exception.InvalidUserException;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
 
 public class SideServer extends Thread{
 
@@ -13,6 +14,7 @@ public class SideServer extends Thread{
     private BufferedReader input;
     private BufferedWriter output;
     private UserCrud crud;
+    private User user;
 
     public SideServer(Socket socket) {
         this.socket = socket;
@@ -33,7 +35,9 @@ public class SideServer extends Thread{
             start:
             while (true) {
                 startMenu();
+
                 boolean check = false;
+
                 while(!check) {
                     send("to public chat | too rooms | find user | see all users | send message to.. | logoff | exit");
 
@@ -56,9 +60,8 @@ public class SideServer extends Thread{
                             } else send("User " + name + " not found");
                             break;
                         case 4:
-                            for(User u : crud.findAll()){
-                                send(u.getName() + " is " + u.getStatus());
-                            }
+                            showUsers();
+
                             break;
                         case 5:
                             send("Enter username");
@@ -73,15 +76,29 @@ public class SideServer extends Thread{
                             check = true;
                             break start;
                         case 7:
+                            send("exit");
                             this.shutdown();
                             check = true;
                     }
                 }
 
             }
-        }catch (IOException | InvalidUserException | InterruptedException ex){
+        }catch (IOException | InvalidUserException ex){
             this.shutdown();
         }
+    }
+
+    private void showUsers() {
+        List<SideServer> servers = Server.serverList;
+        if(servers.size() > 1){
+            send("All connected users:");
+            for(SideServer server : servers){
+                if(server.user !=null && !server.user.equals(this.user)){
+                    send(server.user.getName());
+                }
+            }
+        }else send("There is nobody but you");
+
     }
 
     private void send(String msg) {
@@ -108,43 +125,50 @@ public class SideServer extends Thread{
     }
 
     private boolean login(String namePass){
-        User user;
-        return (user = crud.findOne(namePass)) != null;
+        if((user = crud.findOne(namePass)) != null) {
+            for(SideServer server : Server.serverList) {
+                if(Server.serverList.size() > 1 && !server.equals(this) && server.user.equals(this.user)) {
+                    return false;
+                }
+            }
+            return true;
+        }else return false;
     }
 
     private boolean registration(String newUser){
-        User user;
         return (user = crud.create(newUser)) != null;
     }
 
-    private void startMenu() throws IOException, InterruptedException {
+    private void startMenu() throws IOException{
         boolean check = false;
         while(!check) {
-
-            send("login | registration | exit");
-            String answer = input.readLine();
-            switch (Integer.parseInt(answer)) {
-                case 1:
-                    send("Enter username,password");
-                    String namePass = input.readLine();
-                    if(!login(namePass)) {
-                        send("Incorrect user data");
-                    }else check = true;
-                    break;
-                case 2:
-                    send("Create new  username,password");
-                    String newUser = input.readLine();
-                    if(!registration(newUser)) {
-                        send("Incorrect user data");
-                    }else check = true;
-                    break;
-                case 3:
-                    send("exit");
-                    this.shutdown();
-                    check = true;
-                    break;
+            try {
+                send("login | registration | exit");
+                String answer = input.readLine();
+                switch (Integer.parseInt(answer)) {
+                    case 1:
+                        send("Enter username,password");
+                        String namePass = input.readLine();
+                        if(!login(namePass)) {
+                            send("Incorrect user data");
+                        } else check = true;
+                        break;
+                    case 2:
+                        send("Create new  username,password");
+                        String newUser = input.readLine();
+                        if(!registration(newUser)) {
+                            send("Incorrect user data");
+                        } else check = true;
+                        break;
+                    case 3:
+                        send("exit");
+                        this.shutdown();
+                        check = true;
+                        break;
+                }
+            }catch (NumberFormatException ex){
+                continue;
             }
-
         }
     }
     private void sendToAll(String message){
