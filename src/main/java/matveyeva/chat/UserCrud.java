@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class UserCrud {
-    private Set<User> users;
+    public static Set<User> users;
 
     public UserCrud(){
         try {
@@ -22,9 +22,9 @@ public class UserCrud {
         try{
             User user = split(str);
             users.add(user);
-            reloadUsers();
+//            reloadUsers();
             return user;
-        }catch (InvalidUserException | IllegalArgumentException | IOException ex){
+        }catch (InvalidUserException | IllegalArgumentException  ex){
             System.out.println(ex.getMessage());
             return null;
         }
@@ -46,9 +46,9 @@ public class UserCrud {
             User user = split(newUser);
             users.remove(oldUser);
             users.add(user);
-            reloadUsers();
+//            reloadUsers();
             return user;
-        }catch(InvalidUserException | IOException ex){
+        }catch(InvalidUserException ex){
             System.out.println(ex.getMessage());
             return null;
         }

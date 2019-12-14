@@ -6,6 +6,7 @@ import matveyeva.chat.exception.InvalidUserException;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SideServer extends Thread{
@@ -74,6 +75,8 @@ public class SideServer extends Thread{
 
                             break;
                         case 6:
+                            this.user.setStatus(User.Status.OFFLINE);
+                            crud.reloadUsers();
                             check = true;
                             break start;
                         case 7:
@@ -120,16 +123,20 @@ public class SideServer extends Thread{
                 socket.close();
                 input.close();
                 output.close();
+                List<SideServer> list = new ArrayList<SideServer>();
                 for (SideServer ss : Server.serverList) {
-                    if(ss.equals(this)) ss.interrupt();
-                    Server.serverList.remove(this);
+                    if(ss.equals(this)){
+                        ss.interrupt();
+                        list.add(ss);
+                    }
                 }
+                Server.serverList.removeAll(list);
             }
         } catch (IOException ignored) {}
     }
 
     private boolean login(String namePass){
-        if((user = crud.findOne(namePass)) != null) {
+        if((user = crud.findOne(namePass)) != null && user.getStatus() != User.Status.BANNED) {
             for(SideServer server : Server.serverList) {
                 if(Server.serverList.size() > 1 && !server.equals(this) && server.user.equals(this.user)) {
                     return false;
