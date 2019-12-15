@@ -65,7 +65,7 @@ public class SideClient {
             try {
                 while (true) {
                     message = input.readLine();
-                    if(message.equals("exit")){
+                    if(message.equalsIgnoreCase("exit")){
                         SideClient.this.shutdown();
                     }
                     System.out.println(message);

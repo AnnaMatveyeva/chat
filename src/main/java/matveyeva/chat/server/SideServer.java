@@ -40,23 +40,24 @@ public class SideServer extends Thread{
                 boolean check = false;
 
                 while(!check) {
-                    send("to public chat | too rooms | find user | see all users | send message to.. | logoff | exit");
+                    send("to public chat | too rooms | find user | see all users | send message to.. | check private messages | logoff | exit");
 
                     String answer = input.readLine();
                     switch (Integer.parseInt(answer)) {
                         case 1:
                             send("Redirect to chat");
+
                             //переходит к чату
                             check = true;
                             break;
                         case 2:
+                            send("Redirect to rooms");
                             //переходит к RoomMenu
                             break;
                         case 3:
                             send("Enter username");
                             String name = input.readLine();
                             User user;
-
                             if((user = crud.findByName(name)) != null) {
                                 send(user.getName() + " is " + user.getStatus());
                             } else send("User " + name + " not found");
@@ -75,17 +76,17 @@ public class SideServer extends Thread{
 
                             break;
                         case 6:
-                            this.user.setStatus(User.Status.OFFLINE);
-                            crud.reloadUsers();
-                            check = true;
-                            break start;
+                            send("Redirect to private messages");
+                            //к личным сообщениям
+                            break;
                         case 7:
-                            this.user.setStatus(User.Status.OFFLINE);
-                            System.out.println(this.user.getStatus());
-                            send("exit");
-                            crud.reloadUsers();
-                            this.shutdown();
+                            exit("You logged off");
                             check = true;
+                            break;
+                        case 8:
+                            exit("Exit");
+                            check = true;
+                            break;
                     }
                 }
 
@@ -111,12 +112,22 @@ public class SideServer extends Thread{
     private void send(String msg) {
         try {
             output.write(msg + "\n");
-            System.out.println("wrote " + msg);
             output.flush();
         } catch (IOException ex) {
 
         }
     }
+
+    private void exit(String message) throws IOException{
+        send(message);
+        this.user.setStatus(User.Status.OFFLINE);
+        crud.setUserStatus(this.user);
+        crud.reloadUsers();
+        this.user = null;
+        if(message.equalsIgnoreCase("exit"))
+            this.shutdown();
+    }
+
     private void shutdown() {
         try {
             if(!socket.isClosed()) {
@@ -164,7 +175,7 @@ public class SideServer extends Thread{
                             send("Incorrect user data");
                         } else {
                             this.user.setStatus(User.Status.ONLINE);
-                            System.out.println(this.user.getStatus());
+                            crud.setUserStatus(this.user);
                             check = true;
                         }
                         break;
@@ -175,7 +186,7 @@ public class SideServer extends Thread{
                             send("Incorrect user data");
                         } else {
                             this.user.setStatus(User.Status.ONLINE);
-                            System.out.println(this.user.getStatus());
+                            crud.setUserStatus(this.user);
                             check = true;
                         }
                         break;

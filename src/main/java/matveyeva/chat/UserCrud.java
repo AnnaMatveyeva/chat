@@ -1,6 +1,7 @@
 package matveyeva.chat;
 
 import matveyeva.chat.exception.InvalidUserException;
+import sun.rmi.server.UnicastServerRef;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -63,33 +64,41 @@ public class UserCrud {
         return null;
     }
 
+    public void setUserStatus(User user){
+        if(users.contains(user)) {
+            for(User u : users) {
+                if(user.equals(u)) {
+                    u.setStatus(user.getStatus());
+                }
+            }
+        }
+    }
+
     public Set<User> findAll(){
         return users;
     }
 
     private void loadUsers() throws Exception {
-        users = new HashSet<User>();
-        FileInputStream fileInputStream = new FileInputStream(new File("users.ser"));
-        while (fileInputStream.available() > 0) {
-            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            User user = (User) objectInputStream.readObject();
-            users.add(user);
+        if(users == null){
+            users = new HashSet<User>();
+            try(FileInputStream fileInputStream = new FileInputStream(new File("users.ser"))){
+                while (fileInputStream.available() > 0) {
+                    ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+                    User user = (User) objectInputStream.readObject();
+                    users.add(user);
+                }
+            }
         }
-        fileInputStream.close();
     }
 
     public void reloadUsers() throws IOException{
-        FileOutputStream fileOutputStream = new FileOutputStream(new File("users.ser"));
-        for(User user: users) {
-            ObjectOutputStream out = new ObjectOutputStream(fileOutputStream);
-            out.writeObject(user);
+        try(FileOutputStream fileOutputStream = new FileOutputStream(new File("users.ser"))) {
+            for(User user : users) {
+                ObjectOutputStream out = new ObjectOutputStream(fileOutputStream);
+                out.writeObject(user);
+            }
         }
-        fileOutputStream.close();
-        try {
-            loadUsers();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
     }
 
     private User split(String str) throws InvalidUserException {
