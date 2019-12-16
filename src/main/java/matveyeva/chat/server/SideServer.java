@@ -1,12 +1,14 @@
 package matveyeva.chat.server;
 
+import matveyeva.chat.Message;
+import matveyeva.chat.PublicMessages;
 import matveyeva.chat.User;
 import matveyeva.chat.UserCrud;
-import matveyeva.chat.exception.InvalidUserException;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class SideServer extends Thread{
@@ -16,10 +18,11 @@ public class SideServer extends Thread{
     private BufferedWriter output;
     private UserCrud crud;
     private User user;
-
+    private PublicMessages instance;
     public SideServer(Socket socket) {
         this.socket = socket;
         this.crud = new UserCrud();
+        instance = PublicMessages.getInstance();
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -84,7 +87,7 @@ public class SideServer extends Thread{
                             check = true;
                             break;
                         case 8:
-                            exit("Exit");
+                            exit("Exit from application");
                             check = true;
                             break;
                     }
@@ -115,6 +118,20 @@ public class SideServer extends Thread{
             output.flush();
         } catch (IOException ex) {
 
+        }
+    }
+
+    private void showPublicChat(){
+        List<Message> pubMessages = new LinkedList<Message>(instance.getPublicMessages());
+        for(Message mess : pubMessages){
+            System.out.println(mess.toString());
+        }
+        while(true){
+            if(instance.getPublicMessages().size() != pubMessages.size()){
+                for(int i = 0; i < instance.getPublicMessages().size(); i++){
+                    //читать
+                }
+            }
         }
     }
 
