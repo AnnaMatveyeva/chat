@@ -1,10 +1,11 @@
 package matveyeva.chat;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 public class PublicMessages {
-    private volatile List<Message> publicMessages = new LinkedList<Message>();
+    private volatile List<Message> publicMessages = new ArrayList<Message>();
     private static PublicMessages instance = null;
 
 

@@ -1,7 +1,5 @@
 package matveyeva.chat.client;
 
-import matveyeva.chat.User;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
@@ -12,7 +10,6 @@ public class SideClient {
     private BufferedReader input;
     private BufferedWriter output;
     private Scanner scanner;
-    private User user;
 
     public SideClient(Socket socket) {
 

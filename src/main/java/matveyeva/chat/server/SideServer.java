@@ -5,11 +5,10 @@ import matveyeva.chat.PublicMessages;
 import matveyeva.chat.User;
 import matveyeva.chat.UserCrud;
 
+import java.awt.image.AreaAveragingScaleFilter;
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class SideServer extends Thread{
 
@@ -19,10 +18,13 @@ public class SideServer extends Thread{
     private UserCrud crud;
     private User user;
     private PublicMessages instance;
+    private volatile List<Message> privateMessages;
+
     public SideServer(Socket socket) {
         this.socket = socket;
         this.crud = new UserCrud();
         instance = PublicMessages.getInstance();
+        privateMessages = new ArrayList<>();
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -48,7 +50,7 @@ public class SideServer extends Thread{
                     String answer = input.readLine();
                     switch (Integer.parseInt(answer)) {
                         case 1:
-                            send("Redirect to chat");
+                            send("Public chat:");
                             showPublicChat();
                             break;
                         case 2:
@@ -56,12 +58,7 @@ public class SideServer extends Thread{
                             //переходит к RoomMenu
                             break;
                         case 3:
-                            send("Enter username");
-                            String name = input.readLine();
-                            User user;
-                            if((user = crud.findByName(name)) != null) {
-                                send(user.getName() + " is " + user.getStatus());
-                            } else send("User " + name + " not found");
+                            findUser();
                             break;
                         case 4:
                             showUsers();
@@ -69,16 +66,15 @@ public class SideServer extends Thread{
                         case 5:
                             send("Enter username");
                             String username = input.readLine();
-                            User us;
-                            if((us = crud.findByName(username)) != null) {
-                                send("Enter a message");
-                                //отправить сообщени найденному пользователю
-                            } else send("User " + username + " not found");
+                            User friend;
+                            if((friend = crud.findByName(username)) != null && friend.getStatus().equals(User.Status.ONLINE)) {
+                                toPrivateChat(friend);
+                            } else send("User " + username + " not found or is not online");
 
                             break;
                         case 6:
                             send("Redirect to private messages");
-                            //к личным сообщениям
+                            showPrivateMessages();
                             break;
                         case 7:
                             exit("You logged off");
@@ -94,6 +90,74 @@ public class SideServer extends Thread{
             }
         }catch (IOException ex ){
             this.shutdown();
+        }
+    }
+
+    private void findUser() throws IOException {
+        send("Enter username");
+        String name = input.readLine();
+        User user;
+        if((user = crud.findByName(name)) != null) {
+            send(user.getName() + " is " + user.getStatus());
+        } else send("User " + name + " not found");
+    }
+
+    private void showPrivateMessages() throws IOException {
+        if(!privateMessages.isEmpty()) {
+            Map<String, User> userMess = new HashMap<String,User>();
+            StringBuilder str = new StringBuilder();
+
+            for(int i = 0; i< privateMessages.size(); i++) {
+                userMess.put(String.valueOf(i + 1),privateMessages.get(i).getUser());
+                if(!str.toString().contains(privateMessages.get(i).getUser().getName()))
+                    str.append(privateMessages.get(i).getUser().getName() + " | ");
+            }
+
+            send("You have private chats with :");
+            send(str.toString());
+            String answer = input.readLine();
+
+            if(answer.equalsIgnoreCase("exit")){
+                send("Exit from private messages");
+            }else if(userMess.containsKey(answer)){
+                User friend = userMess.get(answer);
+                if(!friend.getStatus().equals(User.Status.ONLINE)){
+                    send("User " + friend.getName() + "is not online. You  can't answer");
+                }else toPrivateChat(friend);
+            }
+        }else send("You don't have private chats");
+    }
+
+    private void toPrivateChat(User friend) throws IOException {
+        send("Chat with " + friend.getName());
+        List<Message> messages = new ArrayList<Message>(privateMessages);
+        for(Message mess : messages){
+            if(mess.getUser().equals(friend)){
+                send(mess.toString());
+            }
+        }
+        while(true){
+            if(privateMessages.size() != messages.size()){
+                for(int i = messages.size(); i < privateMessages.size(); i++){
+                    Message mess = privateMessages.get(i);
+                    messages.add(mess);
+                    if(mess.getUser().equals(friend)){
+                        send(mess.toString());
+                    }
+                }
+            }
+            if(input.ready()){
+                String str = input.readLine();
+                if(!str.equalsIgnoreCase("exit")) {
+                    Message newMess = new Message(this.user,str);
+                    sendTo(friend,newMess);
+                    send(newMess.toString());
+                }else {
+                    send("Exit from chat with " + friend.getName());
+
+                    break;
+                }
+            }
         }
     }
 
@@ -120,7 +184,7 @@ public class SideServer extends Thread{
     }
 
     private void showPublicChat() throws IOException {
-        List<Message> pubMessages = new LinkedList<Message>(instance.getPublicMessages());
+        List<Message> pubMessages = new ArrayList<>(instance.getPublicMessages());
         for(Message mess : pubMessages){
             send(mess.toString());
         }
@@ -137,6 +201,7 @@ public class SideServer extends Thread{
                 if(!str.equalsIgnoreCase("exit")) {
                     Message newMess = new Message(this.user,str);
                     instance.getPublicMessages().add(newMess);
+
                 }else {
                     send("Exit from public chat");
                     break;
@@ -175,10 +240,14 @@ public class SideServer extends Thread{
 
     private boolean login(String namePass){
         if((user = crud.findOne(namePass)) != null && user.getStatus() != User.Status.BANNED) {
-            for(SideServer server : Server.serverList) {
-                if(Server.serverList.size() > 1 && !server.equals(this) && server.user.equals(this.user)) {
-                    return false;
+            try{
+                for(SideServer server : Server.serverList) {
+                    if(Server.serverList.size() > 1 && !server.equals(this) && server.user.equals(this.user)) {
+                        return false;
+                    }
                 }
+            }catch (NullPointerException ex){
+                return true;
             }
             return true;
         }else return false;
@@ -228,10 +297,12 @@ public class SideServer extends Thread{
             }
         }
     }
-    private void sendToAll(String message){
+
+    private void sendTo(User friend, Message message){
         for(SideServer ss : Server.serverList) {
-            ss.send(message);
+            if(ss.user.equals(friend)){
+                ss.privateMessages.add(message);
+            }
         }
     }
-
 }

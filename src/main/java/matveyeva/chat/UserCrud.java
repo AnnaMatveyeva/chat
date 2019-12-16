@@ -22,9 +22,9 @@ public class UserCrud {
     public User create(String str){
         try{
             User user = split(str);
-            users.add(user);
-//            reloadUsers();
-            return user;
+            if(users.add(user))
+                return user;
+            else return null;
         }catch (InvalidUserException | IllegalArgumentException  ex){
             System.out.println(ex.getMessage());
             return null;

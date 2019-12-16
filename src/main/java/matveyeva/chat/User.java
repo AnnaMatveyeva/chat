@@ -1,6 +1,8 @@
 package matveyeva.chat;
 
 import java.io.Serializable;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 
 public class User implements Serializable {
@@ -9,6 +11,8 @@ public class User implements Serializable {
     private String password;
     private String role;
     private Status status;
+
+    public User() {}
 
     public enum Status{
         BANNED,
