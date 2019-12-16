@@ -1,8 +1,6 @@
 package matveyeva.chat;
 
 import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Objects;
 
 public class User implements Serializable {
@@ -12,25 +10,30 @@ public class User implements Serializable {
     private String role;
     private Status status;
 
-    public User() {}
+    public User() {
+    }
 
-    public enum Status{
+    public enum Status {
         BANNED,
         ONLINE,
         OFFLINE;
     }
+
     public User(String name, String password) {
         this.name = name;
         this.password = password;
         this.role = "USER";
 
     }
+
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
+
     public String getPassword() {
         return password;
     }
@@ -57,10 +60,14 @@ public class User implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if(this == o) return true;
-        if(o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         User user = (User) o;
-        return Objects.equals(name, user.name) && Objects.equals(password,user.password);
+        return Objects.equals(name, user.name) && Objects.equals(password, user.password);
     }
 
     @Override
@@ -68,7 +75,7 @@ public class User implements Serializable {
         return Objects.hash(name);
     }
 
-    public boolean isUserValid(){
+    public boolean isUserValid() {
         return true;
     }
 }

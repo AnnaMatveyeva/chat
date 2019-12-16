@@ -1,7 +1,6 @@
 package matveyeva.chat;
 
 import matveyeva.chat.exception.InvalidUserException;
-import sun.rmi.server.UnicastServerRef;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -106,6 +105,9 @@ public class UserCrud {
         if(userstr.length == 2){
             User user = new User(userstr[0], userstr[1]);
             user.isUserValid();
+            if(user.getName().equalsIgnoreCase("admin")){
+                user.setRole("ADMIN");
+            }
             return user;
         }else throw new InvalidUserException("Incorrect user data");
     }
@@ -114,6 +116,11 @@ public class UserCrud {
         try{
             User user = split(namePass);
             if(users.contains(user)){
+                for(User u : users) {
+                    if(user.equals(u)) {
+                        user = u;
+                    }
+                }
                 return user;
             }else return null;
         }catch (InvalidUserException ex){
