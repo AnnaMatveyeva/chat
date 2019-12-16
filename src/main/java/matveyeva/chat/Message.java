@@ -49,6 +49,6 @@ public class Message {
     }
 
     public String toString(){
-        return  date.toString() + " " + time.toString() + " " + user.getName() + ": " + text;
+        return  date.toString() + " " + time.getHour()+ ":" + time.getMinute() + " " + user.getName() + ": " + text;
     }
 }

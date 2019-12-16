@@ -42,7 +42,6 @@ public class SideClient {
     public class WriteMsg extends Thread {
         @Override
         public void run() {
-            System.out.println("ready to write");
             while (true) {
                 String message;
                 try {
@@ -60,7 +59,6 @@ public class SideClient {
 
         @Override
         public void run() {
-            System.out.println("start listen");
             String message;
             try {
                 while (true) {

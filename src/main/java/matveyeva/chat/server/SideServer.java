@@ -49,9 +49,7 @@ public class SideServer extends Thread{
                     switch (Integer.parseInt(answer)) {
                         case 1:
                             send("Redirect to chat");
-
-                            //переходит к чату
-                            check = true;
+                            showPublicChat();
                             break;
                         case 2:
                             send("Redirect to rooms");
@@ -94,7 +92,7 @@ public class SideServer extends Thread{
                 }
 
             }
-        }catch (IOException ex){
+        }catch (IOException ex ){
             this.shutdown();
         }
     }
@@ -121,15 +119,27 @@ public class SideServer extends Thread{
         }
     }
 
-    private void showPublicChat(){
+    private void showPublicChat() throws IOException {
         List<Message> pubMessages = new LinkedList<Message>(instance.getPublicMessages());
         for(Message mess : pubMessages){
-            System.out.println(mess.toString());
+            send(mess.toString());
         }
         while(true){
             if(instance.getPublicMessages().size() != pubMessages.size()){
-                for(int i = 0; i < instance.getPublicMessages().size(); i++){
-                    //читать
+                for(int i = pubMessages.size(); i < instance.getPublicMessages().size(); i++){
+                    Message mess = instance.getPublicMessages().get(i);
+                    pubMessages.add(mess);
+                    send(mess.toString());
+                }
+            }
+            if(input.ready()){
+                String str = input.readLine();
+                if(!str.equalsIgnoreCase("exit")) {
+                    Message newMess = new Message(this.user,str);
+                    instance.getPublicMessages().add(newMess);
+                }else {
+                    send("Exit from public chat");
+                    break;
                 }
             }
         }
