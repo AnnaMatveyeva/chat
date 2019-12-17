@@ -5,11 +5,13 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import matveyeva.chat.Invitation;
 import matveyeva.chat.Message;
 import matveyeva.chat.PublicMessages;
 import matveyeva.chat.Room;
@@ -17,7 +19,6 @@ import matveyeva.chat.Rooms;
 import matveyeva.chat.User;
 import matveyeva.chat.User.Status;
 import matveyeva.chat.UserCrud;
-import java.net.Socket;
 
 public class SideServer extends Thread {
 
@@ -29,12 +30,15 @@ public class SideServer extends Thread {
     private List<Message> publicMessagesList;
     private volatile List<Message> privateMessages;
     private List<Room> roomsList;
+    private List<Invitation> invitations;
+
 
     public SideServer(Socket socket) {
         this.socket = socket;
         this.crud = new UserCrud();
         publicMessagesList = PublicMessages.INSTANCE.getPublicMessages();
         privateMessages = new ArrayList<>();
+        invitations = new ArrayList<>();
         roomsList = Rooms.INSTANCE.getRoomsList();
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -63,7 +67,7 @@ public class SideServer extends Thread {
 
                     while (!check) {
                         send(
-                            "to public chat | to rooms | find user | see connected users | send message to.. | check private messages | logoff | exit");
+                            "to public chat | to rooms | find user | see connected users | send message to.. | check private messages | invitations " + invitations.size() + " | logoff | exit |" );
 
                         String answer = input.readLine();
                         switch (Integer.parseInt(answer)) {
@@ -91,17 +95,19 @@ public class SideServer extends Thread {
                                 } else {
                                     send("User " + username + " not found or is not online");
                                 }
-
                                 break;
                             case 6:
                                 send("Redirect to private messages");
                                 showPrivateMessages();
                                 break;
                             case 7:
+                                showInvitations();
+                                break;
+                            case 8:
                                 exit("You logged off");
                                 check = true;
                                 break;
-                            case 8:
+                            case 9:
                                 exit("Exit from application");
                                 check = true;
                                 break;
@@ -113,6 +119,45 @@ public class SideServer extends Thread {
         } catch (IOException ex) {
             this.shutdown();
         }
+    }
+
+    private void showInvitations() throws IOException {
+        if(!invitations.isEmpty()) {
+            while (true) {
+                if (invitations.isEmpty())
+                    break;
+                StringBuilder str = new StringBuilder();
+                Map<String, Invitation> iMap = new HashMap<>();
+                for (int i = 0; i < invitations.size(); i++) {
+                    str.append(
+                        "to " + invitations.get(i).getRoom().getTitle() + "from " + invitations
+                            .get(i)
+                            .getFromWho().getName() + "; ");
+                    iMap.put(String.valueOf(i + 1), invitations.get(i));
+                }
+                send(str.toString());
+                String answer = input.readLine();
+
+                if (answer.equalsIgnoreCase("exit"))
+                    break;
+
+                if (iMap.containsKey(answer)) {
+                    Invitation invite = iMap.get(answer);
+                    send(invite.toString());
+                    send("to room | delete invitation | return");
+                    String choice = input.readLine();
+                    switch (Integer.parseInt(choice)) {
+                        case 1:
+                            toRoom(invite.getRoom());
+                            break;
+                        case 2:
+                            invitations.remove(invite);
+                            send("Invitation was deleted");
+                            break;
+                    }
+                }
+            }
+        }else send("Nothing to show");
     }
 
     private void findUser() throws IOException {
@@ -350,7 +395,7 @@ public class SideServer extends Thread {
                 }
                 while (!check) {
                     send("to public chat | to rooms | find user | see connected users | "
-                        + "see all users | send message to.. | check private messages| ban/delete/update user | create/delete room |logoff | exit ");
+                        + "see all users | send message to.. | check private messages| invitations " + invitations.size() + " | ban/delete/update user | create/delete room | logoff | exit ");
 
                     String answer = input.readLine();
                     switch (Integer.parseInt(answer)) {
@@ -378,9 +423,7 @@ public class SideServer extends Thread {
                             if ((friend = crud.findByName(username)) != null && friend.getStatus()
                                 .equals(User.Status.ONLINE)) {
                                 toPrivateChat(friend);
-                            } else {
-                                send("User " + username + " not found or is not online");
-                            }
+                            } else send("User " + username + " not found or is not online");
 
                             break;
                         case 7:
@@ -388,16 +431,19 @@ public class SideServer extends Thread {
                             showPrivateMessages();
                             break;
                         case 8:
-                            userChangesMenu();
+                            showInvitations();
                             break;
                         case 9:
-                            adminRoomMenu();
+                            userChangesMenu();
                             break;
                         case 10:
+                            adminRoomMenu();
+                            break;
+                        case 11:
                             exit("You logged off");
                             check = true;
                             break;
-                        case 11:
+                        case 12:
                             exit("Exit from application");
                             check = true;
                             break;
@@ -697,9 +743,7 @@ public class SideServer extends Thread {
                     case 3:
                         check = true;
                         break;
-
                 }
-
             }
         } catch (NumberFormatException ex) {
 
@@ -709,7 +753,35 @@ public class SideServer extends Thread {
         }
     }
 
-    private void inviteUser() {
+    private void inviteUser() throws IOException {
+        send("Enter user name");
+        String username = input.readLine();
+        User usertoInvite;
+        if ((usertoInvite = crud.findByName(username)) != null && usertoInvite.getStatus().equals(Status.ONLINE)) {
+            Room  r = null;
+            send("Enter room title");
+            String title = input.readLine();
+            for(Room room : roomsList){
+                if(room.getTitle().equals(title)){
+                    r = room;
+                    sendInvitation(this.user, usertoInvite,r);
+                    send("User was invited");
+                    break;
+                }
+            }
+            if(r == null){
+                send("Room not found");
+            }
+        } else send("User not found or not online");
+    }
+
+    private void sendInvitation(User fromWho, User toWho, Room room) {
+        for(SideServer ss : Server.serverList){
+            if(ss.user.equals(toWho)){
+                ss.invitations.add(new Invitation(fromWho,toWho,room));
+                break;
+            }
+        }
     }
 
     private void showRooms() {

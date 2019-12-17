@@ -9,8 +9,8 @@ public class Client {
     public static int port = 8080;
 
     public static void main(String[] args) {
-        try{
-            Socket socket = new Socket(ipAddr,port);
+        try {
+            Socket socket = new Socket(ipAddr, port);
             new SideClient(socket);
         } catch (IOException e) {
             e.printStackTrace();
