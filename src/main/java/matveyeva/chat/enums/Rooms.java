@@ -1,7 +1,8 @@
-package matveyeva.chat;
+package matveyeva.chat.enums;
 
 import java.util.ArrayList;
 import java.util.List;
+import matveyeva.chat.Entity.Room;
 
 public enum Rooms {
     INSTANCE;

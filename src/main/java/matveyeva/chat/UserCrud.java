@@ -1,5 +1,6 @@
 package matveyeva.chat;
 
+import matveyeva.chat.Entity.User;
 import matveyeva.chat.exception.InvalidUserException;
 
 import java.io.*;

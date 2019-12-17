@@ -1,4 +1,4 @@
-package matveyeva.chat;
+package matveyeva.chat.Entity;
 
 public class Invitation {
     private User fromWho;

@@ -1,8 +1,8 @@
-package matveyeva.chat;
+package matveyeva.chat.enums;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import matveyeva.chat.Entity.Message;
 
 public enum PublicMessages {
     INSTANCE;
