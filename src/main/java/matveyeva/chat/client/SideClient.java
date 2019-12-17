@@ -1,6 +1,10 @@
 package matveyeva.chat.client;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -43,8 +47,12 @@ public class SideClient {
                 String message;
                 try {
                     message = scanner.nextLine();
-                    output.write(message+ "\n");
-                    output.flush();
+                    if (!message.equals(" ") && !message.equals("")) {
+                        output.write(message + "\n");
+                        output.flush();
+                    } else {
+                        System.out.println("You wrote empty line,try again");
+                    }
                 } catch (IOException e) {
                     SideClient.this.shutdown();
                 }
@@ -65,7 +73,6 @@ public class SideClient {
                         SideClient.this.shutdown();
                     }
                     System.out.println(message);
-
                 }
             } catch (IOException e) {
                 SideClient.this.shutdown();

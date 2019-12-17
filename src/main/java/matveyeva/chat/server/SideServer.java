@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import matveyeva.chat.Message;
 import matveyeva.chat.PublicMessages;
+import matveyeva.chat.Room;
+import matveyeva.chat.Rooms;
 import matveyeva.chat.User;
 import matveyeva.chat.User.Status;
 import matveyeva.chat.UserCrud;
@@ -24,14 +26,16 @@ public class SideServer extends Thread {
     private BufferedWriter output;
     private UserCrud crud;
     private User user;
-    private PublicMessages instance;
+    private List<Message> publicMessagesList;
     private volatile List<Message> privateMessages;
+    private List<Room> roomsList;
 
     public SideServer(Socket socket) {
         this.socket = socket;
         this.crud = new UserCrud();
-        instance = PublicMessages.getInstance();
+        publicMessagesList = PublicMessages.INSTANCE.getPublicMessages();
         privateMessages = new ArrayList<>();
+        roomsList = Rooms.INSTANCE.getRoomsList();
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -45,10 +49,16 @@ public class SideServer extends Thread {
     public void run() {
         try {
             while (true) {
-                startMenu();
+                loginMenu();
                 if (this.user.getRole().equalsIgnoreCase("admin")) {
                     showAdminMenu();
+                    if(this.isInterrupted()){
+                        break;
+                    }
                 } else {
+                    if(this.isInterrupted()){
+                        break;
+                    }
                     boolean check = false;
 
                     while (!check) {
@@ -63,7 +73,7 @@ public class SideServer extends Thread {
                                 break;
                             case 2:
                                 send("Redirect to rooms");
-                                //переходит к RoomMenu
+                                showRoomMenu();
                                 break;
                             case 3:
                                 findUser();
@@ -205,14 +215,14 @@ public class SideServer extends Thread {
     }
 
     private void showPublicChat() throws IOException {
-        List<Message> pubMessages = new ArrayList<>(instance.getPublicMessages());
+        List<Message> pubMessages = new ArrayList<>(publicMessagesList);
         for (Message mess : pubMessages) {
             send(mess.toString());
         }
         while (true) {
-            if (instance.getPublicMessages().size() != pubMessages.size()) {
-                for (int i = pubMessages.size(); i < instance.getPublicMessages().size(); i++) {
-                    Message mess = instance.getPublicMessages().get(i);
+            if (publicMessagesList.size() != pubMessages.size()) {
+                for (int i = pubMessages.size(); i < publicMessagesList.size(); i++) {
+                    Message mess = publicMessagesList.get(i);
                     pubMessages.add(mess);
                     send(mess.toString());
                 }
@@ -221,7 +231,7 @@ public class SideServer extends Thread {
                 String str = input.readLine();
                 if (!str.equalsIgnoreCase("exit")) {
                     Message newMess = new Message(this.user, str);
-                    instance.getPublicMessages().add(newMess);
+                    publicMessagesList.add(newMess);
 
                 } else {
                     send("Exit from public chat");
@@ -232,10 +242,10 @@ public class SideServer extends Thread {
     }
 
     private void exit(String message) throws IOException {
-        if (!this.user.getStatus().equals(Status.BANNED)) {
+        if (this.user != null && !this.user.getStatus().equals(Status.BANNED)) {
             this.user.setStatus(User.Status.OFFLINE);
+            crud.setUserStatus(this.user);
         }
-        crud.setUserStatus(this.user);
         crud.reloadUsers();
         this.user = null;
         if (message.equalsIgnoreCase("Exit from application") || message.contains("deleted")
@@ -249,9 +259,9 @@ public class SideServer extends Thread {
     private void shutdown() {
         try {
             if (!socket.isClosed()) {
-                socket.close();
                 input.close();
                 output.close();
+                socket.close();
                 List<SideServer> list = new ArrayList<SideServer>();
                 for (SideServer ss : Server.serverList) {
                     if (ss.equals(this)) {
@@ -259,6 +269,7 @@ public class SideServer extends Thread {
                         list.add(ss);
                     }
                 }
+
                 Server.serverList.removeAll(list);
             }
         } catch (IOException ignored) {
@@ -279,16 +290,15 @@ public class SideServer extends Thread {
                 return true;
             }
             return true;
-        } else {
-            return false;
-        }
+        } else return false;
+
     }
 
     private boolean registration(String newUser) {
         return (user = crud.create(newUser)) != null;
     }
 
-    private void startMenu() throws IOException {
+    private void loginMenu() throws IOException {
         boolean check = false;
         while (!check) {
             try {
@@ -318,8 +328,7 @@ public class SideServer extends Thread {
                         }
                         break;
                     case 3:
-                        send("exit");
-                        this.shutdown();
+                        exit("Exit from application");
                         check = true;
                         break;
                 }
@@ -336,9 +345,12 @@ public class SideServer extends Thread {
 
                 boolean check = false;
 
+                if(this.isInterrupted()){
+                    break;
+                }
                 while (!check) {
                     send("to public chat | to rooms | find user | see connected users | "
-                        + "see all users | send message to.. | check private messages| ban/delete/update user | create/delete room | logoff | exit ");
+                        + "see all users | send message to.. | check private messages| ban/delete/update user | create/delete room |logoff | exit ");
 
                     String answer = input.readLine();
                     switch (Integer.parseInt(answer)) {
@@ -348,7 +360,7 @@ public class SideServer extends Thread {
                             break;
                         case 2:
                             send("Redirect to rooms");
-                            //переходит к RoomMenu
+                            showRoomMenu();
                             break;
                         case 3:
                             findUser();
@@ -376,10 +388,11 @@ public class SideServer extends Thread {
                             showPrivateMessages();
                             break;
                         case 8:
-                            userMenu();
+                            userChangesMenu();
                             break;
                         case 9:
-                            roomMenu();
+                            adminRoomMenu();
+                            break;
                         case 10:
                             exit("You logged off");
                             check = true;
@@ -392,7 +405,7 @@ public class SideServer extends Thread {
                 }
 
             }
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
         }
     }
@@ -411,12 +424,111 @@ public class SideServer extends Thread {
         }
     }
 
-    private void roomMenu() {
+    private void adminRoomMenu() {
+        boolean check = false;
+        try {
+            while (!check) {
+                send("delete room | update room | see all rooms | create room |exit");
+                String answer = input.readLine();
+                switch (Integer.parseInt(answer)) {
+                    case 1:
+                        deleteRoom();
+                        break;
+                    case 2:
+                        updateRoom();
+                        break;
+                    case 3:
+                        showAllRooms();
+                        break;
+                    case 4:
+                        createRoom();
+                        break;
+                    case 5:
+                        check = true;
+                        break;
+                }
+
+            }
+        } catch (NumberFormatException ex) {
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            send("Something went wrong");
+        }
+    }
+
+    private void createRoom() throws IOException {
+        send("Enter room title");
+        String title = input.readLine();
+        Room r = null;
+        for(Room room : roomsList){
+            if(room.getTitle().equals(title)){
+                r = room;
+                break;
+            }
+        }
+        if(r == null){
+            r = new Room(title);
+            roomsList.add(r);
+            send("Room \"" + title + "\" was created");
+        }else send("Room with title \"" + title + "\" already exists");
+    }
+
+    private void showAllRooms() {
+        if(!roomsList.isEmpty()) {
+            send("All rooms:");
+            for (Room room : roomsList) {
+                send(room.getTitle() + ";");
+            }
+        }else send("There are no rooms");
+    }
+
+    private void updateRoom() throws IOException {
+        send("Enter room title");
+        String title = input.readLine();
+        Room r = null;
+        send("Enter new room title");
+        String str = input.readLine();
+
+        for(Room room : roomsList){
+            if(room.getTitle().equals(title)){
+                room.setTitle(str);
+                r = room;
+                break;
+            }
+        }
+        if(r == null){
+            send("Room not found");
+        }
+    }
+
+    private void deleteRoom() throws IOException {
+        send("Enter room title");
+        String title = input.readLine();
+        Room r = null;
+        for(Room room : roomsList){
+            if(room.getTitle().equals(title)){
+                r = room;
+                break;
+            }
+        }
+        if(r != null) {
+            send("Do you want to delete room " + r.getTitle() + "which has " + r.getUsers().size()
+                + " users?");
+            send("Yes | No");
+
+            String answer = input.readLine();
+            if(answer.equals("1")){
+                r.getMessages().add(new Message(this.user, "DELETE"));
+                roomsList.remove(r);
+            }
+            send("room was deleted");
+        }else send("Room not found");
 
     }
 
 
-    private void userMenu() throws IOException {
+    private void userChangesMenu() throws IOException {
         boolean check = false;
         try {
             while (!check) {
@@ -457,28 +569,25 @@ public class SideServer extends Thread {
                 " with status " + userToAdmin.getStatus());
             send("Yes | No");
             String str = input.readLine();
-            switch (Integer.parseInt(str)) {
-                case 1:
-                    userToAdmin.setRole("ADMIN");
-                    for (User u : UserCrud.users) {
-                        if (u.equals(userToAdmin)) {
-                            u.setRole(userToAdmin.getRole());
-                        }
-                    }
-                    if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
-                        SideServer serverToShut = null;
-                        for (SideServer server : Server.serverList) {
-                            if (server.user.equals(userToAdmin)) {
-                                serverToShut = server;
-                            }
-                        }
-                        serverToShut.exit("You are admin now");
-                    }
 
-                    break;
-                case 2:
-                    break;
+            if(str.equals("1")){
+                userToAdmin.setRole("ADMIN");
+                for (User u : UserCrud.users) {
+                    if (u.equals(userToAdmin)) {
+                        u.setRole(userToAdmin.getRole());
+                    }
+                }
+                if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
+                    SideServer serverToShut = null;
+                    for (SideServer server : Server.serverList) {
+                        if (server.user.equals(userToAdmin)) {
+                            serverToShut = server;
+                        }
+                    }
+                    serverToShut.exit("You are admin now");
+                }
             }
+
         } else send("user not found or banned");
 
     }
@@ -571,4 +680,104 @@ public class SideServer extends Thread {
             }
         }
     }
+
+    private void showRoomMenu(){
+        boolean check = false;
+        try {
+            while (!check) {
+                send("choose room | invite user to room | exit");
+                String answer = input.readLine();
+                switch (Integer.parseInt(answer)) {
+                    case 1:
+                        showRooms();
+                        break;
+                    case 2:
+                        inviteUser();
+                        break;
+                    case 3:
+                        check = true;
+                        break;
+
+                }
+
+            }
+        } catch (NumberFormatException ex) {
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            send("Something went wrong");
+        }
+    }
+
+    private void inviteUser() {
+    }
+
+    private void showRooms() {
+        if (!roomsList.isEmpty()) {
+            boolean check = false;
+            try {
+                while (!check) {
+                    Map<String, Room> rMap = new HashMap<String, Room>();
+                    StringBuilder str = new StringBuilder();
+                    if(!roomsList.isEmpty()) {
+                        for (int i = 0; i < roomsList.size(); i++) {
+                            rMap.put(String.valueOf(i + 1), roomsList.get(i));
+                            str.append(roomsList.get(i).getTitle() + " | ");
+                        }
+                        str.append(" wite \"exit\" to return");
+                        send(str.toString());
+                    }else check = true;
+
+                    String answer = input.readLine();
+                    if (rMap.containsKey(answer)) {
+                        Room room = rMap.get(answer);
+                        room.getUsers().add(this.user);
+                        toRoom(room);
+                    } else if (answer.equals("exit")) {
+                        check = true;
+                    }
+                }
+            } catch (NumberFormatException | IOException ex) {
+            }
+        }else send("There are no rooms");
+    }
+
+    private void toRoom(Room room) throws IOException {
+        send("You are in " + room.getTitle() + " room, write \"exit\" to return");
+        List<Message> messages = new ArrayList<Message>(room.getMessages());
+        if(!messages.isEmpty()){
+            for(Message mess : messages){
+                send(mess.toString());
+            }
+        }else send("There are no messages");
+        boolean check = false;
+        while (!check) {
+            if (room.getMessages().size() != messages.size()) {
+                for (int i = messages.size(); i < room.getMessages().size(); i++) {
+
+                    Message mess = room.getMessages().get(i);
+                    messages.add(mess);
+                    send(mess.toString());
+                    if(mess.getUser().getRole().equals("ADMIN") && mess.getText().equals("DELETE")){
+                        send("This room was deleted by admin");
+                        check = true;
+                    }
+                }
+            }
+            if (input.ready()) {
+                String str = input.readLine();
+                if (!str.equalsIgnoreCase("exit")) {
+                    Message newMess = new Message(this.user, str);
+                    room.getMessages().add(newMess);
+                } else {
+                    send("Exit from " + room.getTitle() + " room");
+                    room.getUsers().remove(this.user);
+                    check = true;
+                }
+            }
+        }
+    }
+
+
+
 }
