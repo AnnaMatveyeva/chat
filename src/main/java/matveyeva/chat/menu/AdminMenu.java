@@ -11,6 +11,7 @@ import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
 import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
+import matveyeva.chat.exception.InvalidUserException;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
@@ -66,11 +67,15 @@ public class AdminMenu extends UserMenu {
                         send("Enter username");
                         String username = input.readLine();
                         User friend;
-                        if ((friend = crud.findByName(username)) != null && friend.getStatus()
-                            .equals(User.Status.ONLINE)) {
-                            toPrivateChat(friend);
-                        } else {
-                            send("User " + username + " not found or is not online");
+                        try {
+                            if ((friend = crud.findByName(username)) != null && friend.getStatus()
+                                .equals(Status.ONLINE)) {
+                                toPrivateChat(friend);
+                            } else {
+                                send("User " + username + " is not online");
+                            }
+                        } catch (InvalidUserException e) {
+                            send(e.getMessage());
                         }
 
                         break;
@@ -144,137 +149,165 @@ public class AdminMenu extends UserMenu {
             }
         } catch (NumberFormatException ex) {
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
             send("Something went wrong");
         }
     }
 
-    private void makeUserAdmin() throws Exception {
+    private void makeUserAdmin() throws IOException {
         send("Enter user name");
         String username = input.readLine();
         User userToAdmin;
-        if ((userToAdmin = crud.findByName(username)) != null && !userToAdmin.getStatus()
-            .equals(Status.BANNED)) {
-            send("Do you want to make admin " + userToAdmin.getName() +
-                " with status " + userToAdmin.getStatus());
-            send("Yes | No");
-            String str = input.readLine();
+        try {
+            if ((userToAdmin = crud.findByName(username)) != null && !userToAdmin.getStatus()
+                .equals(Status.BANNED)) {
+                send("Do you want to make admin " + userToAdmin.getName() +
+                    " with status " + userToAdmin.getStatus());
+                send("Yes | No");
+                String str = input.readLine();
 
-            if (str.equals("1")) {
-                logger.info("Admin " + user.getName() + " made admin user " + userToAdmin.getName());
-                userToAdmin.setRole("ADMIN");
-                for (User u : UserCrud.users) {
-                    if (u.equals(userToAdmin)) {
-                        u.setRole(userToAdmin.getRole());
-                    }
-                }
-                if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
-                    SideServer serverToShut = null;
-                    for (SideServer server : Server.serverList) {
-                        if (server.user.equals(userToAdmin)) {
-                            serverToShut = server;
+                if (str.equals("1")) {
+                    logger.info(
+                        "Admin " + user.getName() + " made admin user " + userToAdmin.getName());
+                    userToAdmin.setRole("ADMIN");
+                    for (User u : UserCrud.users) {
+                        if (u.equals(userToAdmin)) {
+                            u.setRole(userToAdmin.getRole());
                         }
                     }
-                    serverToShut.exit("You are admin now");
+                    send("User are admin now");
+                    if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
+                        SideServer serverToShut = null;
+                        for (SideServer server : Server.serverList) {
+                            if (server.user.equals(userToAdmin)) {
+                                serverToShut = server;
+                            }
+                        }
+                        serverToShut.exit("You are admin now");
+                    }
                 }
-            }
 
-        } else {
-            send("user not found or banned");
+            } else {
+                send("user banned");
+            }
+        }catch (InvalidUserException ex){
+            ex.getMessage();
         }
 
     }
 
-    private void banUser() throws Exception {
+    private void banUser() throws IOException {
         send("Enter user name");
         String username = input.readLine();
         User usertoBan;
-        if ((usertoBan = crud.findByName(username)) != null && !usertoBan.getStatus()
-            .equals(Status.BANNED)) {
-            send("Do you want to ban " + usertoBan.getName() + " with role " + usertoBan.getRole());
-            send("Yes | No");
-            String str = input.readLine();
-            switch (Integer.parseInt(str)) {
-                case 1:
-                    Status oldStatus = usertoBan.getStatus();
-                    usertoBan.setStatus(User.Status.BANNED);
-                    for (User u : UserCrud.users) {
-                        if (u.equals(usertoBan)) {
-                            u.setStatus(usertoBan.getStatus());
-                        }
-                    }
-                    if (oldStatus.equals(User.Status.ONLINE)) {
-                        SideServer serverToShut = null;
-                        for (SideServer server : Server.serverList) {
-                            if (server.user.equals(usertoBan)) {
-                                serverToShut = server;
+        try {
+            if ((usertoBan = crud.findByName(username)) != null && !usertoBan.getStatus()
+                .equals(Status.BANNED)) {
+                send("Do you want to ban " + usertoBan.getName() + " with role " + usertoBan
+                    .getRole());
+                send("Yes | No");
+                String str = input.readLine();
+                switch (Integer.parseInt(str)) {
+                    case 1:
+                        Status oldStatus = usertoBan.getStatus();
+                        usertoBan.setStatus(User.Status.BANNED);
+                        send("User banned");
+                        for (User u : UserCrud.users) {
+                            if (u.equals(usertoBan)) {
+                                u.setStatus(usertoBan.getStatus());
                             }
                         }
-                        serverToShut.exit("You are banned");
-                    }
-                    logger.info("Admin " + user.getName() + " banned user " + usertoBan.getName() + " with role " + usertoBan.getRole());
-                    break;
-                case 2:
-                    break;
+                        if (oldStatus.equals(User.Status.ONLINE)) {
+                            SideServer serverToShut = null;
+                            for (SideServer server : Server.serverList) {
+                                if (server.user.equals(usertoBan)) {
+                                    serverToShut = server;
+                                }
+                            }
+                            serverToShut.exit("You are banned");
+                        }
+                        logger.info(
+                            "Admin " + user.getName() + " banned user " + usertoBan.getName()
+                                + " with role " + usertoBan.getRole());
+                        break;
+                    case 2:
+                        break;
+                }
+            } else {
+                send("User not found or already banned");
             }
-        } else {
-            send("User not found or already banned");
+        }catch (InvalidUserException ex){
+            send(ex.getMessage());
         }
     }
 
-    private void deleteUser() throws Exception {
+    private void deleteUser() throws IOException{
         send("Enter user name");
         String username = input.readLine();
         User usertoDelete;
-        if ((usertoDelete = crud.findByName(username)) != null) {
-            send("Do you want to delete " + usertoDelete.getName() + " with role " + usertoDelete
-                .getRole());
-            send("Yes | No");
-            String str = input.readLine();
-            switch (Integer.parseInt(str)) {
-                case 1:
-                    if (usertoDelete.getStatus().equals(User.Status.ONLINE)) {
-                        SideServer serverToShut = null;
-                        for (SideServer server : Server.serverList) {
-                            if (server.user.equals(usertoDelete)) {
-                                serverToShut = server;
+        try {
+            if ((usertoDelete = crud.findByName(username)) != null) {
+                send(
+                    "Do you want to delete " + usertoDelete.getName() + " with role " + usertoDelete
+                        .getRole());
+                send("Yes | No");
+                String str = input.readLine();
+                switch (Integer.parseInt(str)) {
+                    case 1:
+                        if (usertoDelete.getStatus().equals(User.Status.ONLINE)) {
+                            SideServer serverToShut = null;
+                            for (SideServer server : Server.serverList) {
+                                if (server.user.equals(usertoDelete)) {
+                                    serverToShut = server;
+                                }
                             }
+                            serverToShut.exit("You are deleted");
                         }
-                        serverToShut.exit("You are deleted");
-                    }
-                    logger.info("Admin " + user.getName() + " deleted user " + usertoDelete.getName() + " with role " + usertoDelete.getRole());
-                    crud.delete(usertoDelete);
-                    break;
-                case 2:
-                    break;
+                        logger.info(
+                            "Admin " + user.getName() + " deleted user " + usertoDelete.getName()
+                                + " with role " + usertoDelete.getRole());
+                        crud.delete(usertoDelete);
+                        send("User deleted");
+                        break;
+                    case 2:
+                        break;
+                }
+            } else {
+                send("User not found");
             }
-        } else {
-            send("User not found");
+        }catch (InvalidUserException ex){
+            send(ex.getMessage());
         }
     }
 
-    private void updateUser() throws Exception {
+    private void updateUser() throws IOException{
         send("Enter user name");
         String username = input.readLine();
         User usertoUpdate;
-        if ((usertoUpdate = crud.findByName(username)) != null && !usertoUpdate.getStatus()
-            .equals(Status.BANNED)) {
-            send("Enter new username,password");
-            String str = input.readLine();
-            crud.update(usertoUpdate, str);
-            logger.info("Admin " + user.getName() + " updated user " + usertoUpdate.getName() + " with role " + usertoUpdate.getRole());
-            if (usertoUpdate.getStatus().equals(User.Status.ONLINE)) {
-                SideServer serverToShut = null;
-                for (SideServer server : Server.serverList) {
-                    if (server.user.equals(usertoUpdate)) {
-                        serverToShut = server;
+        try {
+            if ((usertoUpdate = crud.findByName(username)) != null && !usertoUpdate.getStatus()
+                .equals(Status.BANNED)) {
+                send("Enter new username,password");
+                String str = input.readLine();
+                crud.update(usertoUpdate, str);
+                send("User updated");
+                logger.info("Admin " + user.getName() + " updated user " + usertoUpdate.getName()
+                    + " with role " + usertoUpdate.getRole());
+                if (usertoUpdate.getStatus().equals(User.Status.ONLINE)) {
+                    SideServer serverToShut = null;
+                    for (SideServer server : Server.serverList) {
+                        if (server.user.equals(usertoUpdate)) {
+                            serverToShut = server;
+                        }
                     }
+                    serverToShut.exit("Your credentials updated");
                 }
-                serverToShut.exit("Your credentials updated");
+            } else {
+                send("User no found or banned");
             }
-        } else {
-            send("User no found or banned");
+        }catch (InvalidUserException ex){
+            send(ex.getMessage());
         }
     }
 

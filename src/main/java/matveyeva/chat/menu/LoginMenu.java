@@ -10,7 +10,7 @@ import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
 import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
-import matveyeva.chat.client.Client;
+import matveyeva.chat.exception.InvalidUserException;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
@@ -21,10 +21,10 @@ public class LoginMenu {
     protected BufferedWriter output;
     protected UserCrud crud;
     protected User user;
-    protected List<Message> publicMessagesList;
+    protected volatile List<Message> publicMessagesList;
     protected volatile List<Message> privateMessages;
-    protected List<Room> roomsList;
-    protected List<Invitation> invitations;
+    protected volatile List<Room> roomsList;
+    protected volatile List<Invitation> invitations;
     protected SideServer thisSide;
     private static final org.apache.log4j.Logger logger  = Logger.getLogger(LoginMenu.class);
 
@@ -56,18 +56,20 @@ public class LoginMenu {
                     case 1:
                         send("Enter username,password");
                         String namePass = input.readLine();
-                        if (!login(namePass)) {
-                            send("Incorrect user data");
-                        } else {
+                        if(login(namePass)) {
                             this.user.setStatus(User.Status.ONLINE);
                             crud.setUserStatus(this.user);
-                            if(user.getRole().equalsIgnoreCase("USER")){
+                            if (user.getRole().equalsIgnoreCase("USER")) {
                                 logger.info("User " + this.user.getName() + " logged in");
-                                UserMenu userMenu = new UserMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations, thisSide);
+                                UserMenu userMenu = new UserMenu(input, output, crud, user,
+                                    publicMessagesList, privateMessages, roomsList, invitations,
+                                    thisSide);
                                 userMenu.showMainMenu();
-                            }else if(user.getRole().equalsIgnoreCase("ADMIN")){
+                            } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
                                 logger.info("Admin " + this.user.getName() + " logged in");
-                                AdminMenu adminMenu = new AdminMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations,thisSide);
+                                AdminMenu adminMenu = new AdminMenu(input, output, crud, user,
+                                    publicMessagesList, privateMessages, roomsList, invitations,
+                                    thisSide);
                                 adminMenu.showMainMenu();
                             }
                         }
@@ -75,18 +77,22 @@ public class LoginMenu {
                     case 2:
                         send("Create new  username,password");
                         String newUser = input.readLine();
-                        if (!registration(newUser)) {
-                            send("Incorrect user data");
-                        } else {
+                        if(registration(newUser)) {
                             this.user.setStatus(User.Status.ONLINE);
                             crud.setUserStatus(this.user);
-                            if(user.getRole().equalsIgnoreCase("USER")){
-                                logger.info("User " + this.user.getName() + " was created and logged in");
-                                UserMenu userMenu = new UserMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations, thisSide);
+                            if (user.getRole().equalsIgnoreCase("USER")) {
+                                logger
+                                    .info("User " + this.user.getName() + " was created and logged in");
+                                UserMenu userMenu = new UserMenu(input, output, crud, user,
+                                    publicMessagesList, privateMessages, roomsList, invitations,
+                                    thisSide);
                                 userMenu.showMainMenu();
-                            }else if(user.getRole().equalsIgnoreCase("ADMIN")){
-                                logger.info("Admin " + this.user.getName() + "was created and logged in");
-                                AdminMenu adminMenu = new AdminMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations,thisSide);
+                            } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
+                                logger
+                                    .info("Admin " + this.user.getName() + "was created and logged in");
+                                AdminMenu adminMenu = new AdminMenu(input, output, crud, user,
+                                    publicMessagesList, privateMessages, roomsList, invitations,
+                                    thisSide);
                                 adminMenu.showMainMenu();
                             }
                         }
@@ -111,25 +117,36 @@ public class LoginMenu {
         }
     }
     protected boolean login(String namePass) {
-        if ((user = crud.findOne(namePass)) != null && this.user.getStatus() != Status.BANNED) {
-            try {
-                for (SideServer server : Server.serverList) {
-                    if (Server.serverList.size() > 1 && !server.equals(this) && server.user
-                        .equals(this.user)) {
-                        return false;
+        try {
+            if ((user = crud.findOne(namePass)) != null && this.user.getStatus() != Status.BANNED) {
+                try {
+                    for (SideServer server : Server.serverList) {
+                        if (Server.serverList.size() > 1 && !server.equals(this) && server.user
+                            .equals(this.user)) {
+                            return false;
+                        }
                     }
+                } catch (NullPointerException ex) {
+                    return true;
                 }
-            } catch (NullPointerException ex) {
                 return true;
+            } else {
+                return false;
             }
-            return true;
-        } else {
+        } catch (InvalidUserException e) {
+            send(e.getMessage());
             return false;
         }
+
     }
 
     protected boolean registration(String newUser) {
-        return (user = crud.create(newUser)) != null;
+        try {
+            return (user = crud.create(newUser)) != null;
+        } catch (InvalidUserException e) {
+            send(e.getMessage());
+            return false;
+        }
     }
     protected void exit(String message) throws IOException {
         if (this.user != null && !this.user.getStatus().equals(Status.BANNED)) {

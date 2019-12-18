@@ -13,22 +13,25 @@ import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
 import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
+import matveyeva.chat.exception.InvalidUserException;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
 
-public class UserMenu extends LoginMenu{
-    private static final org.apache.log4j.Logger logger  = Logger.getLogger(UserMenu.class);
+public class UserMenu extends LoginMenu {
+
+    private static final org.apache.log4j.Logger logger = Logger.getLogger(UserMenu.class);
 
     public UserMenu(BufferedReader input, BufferedWriter output, UserCrud crud,
         User user, List<Message> publicMessagesList,
         List<Message> privateMessages, List<Room> roomsList,
-        List<Invitation> invitations,SideServer thisSide) {
+        List<Invitation> invitations, SideServer thisSide) {
         super(input, output, crud, user, publicMessagesList, privateMessages, roomsList,
             invitations, thisSide);
     }
 
     protected void showMainMenu() throws IOException {
+
         boolean check = false;
         while (!check) {
             if (thisSide.isInterrupted()) {
@@ -57,11 +60,13 @@ public class UserMenu extends LoginMenu{
                     send("Enter username");
                     String username = input.readLine();
                     User friend;
-                    if ((friend = crud.findByName(username)) != null && friend
-                        .getStatus().equals(User.Status.ONLINE)) {
-                        toPrivateChat(friend);
-                    } else {
-                        send("User " + username + " not found or is not online");
+                    try {
+                        if ((friend = crud.findByName(username)) != null && friend
+                            .getStatus().equals(User.Status.ONLINE)) {
+                            toPrivateChat(friend);
+                        }else send(friend.getName() + " is not online");
+                    } catch (InvalidUserException ex) {
+                        send(ex.getMessage());
                     }
                     break;
                 case 6:
@@ -81,6 +86,7 @@ public class UserMenu extends LoginMenu{
                     break;
             }
         }
+
     }
 
     protected void showPublicChat() throws IOException {
@@ -114,7 +120,7 @@ public class UserMenu extends LoginMenu{
 
     protected void showRoomMenu() {
         boolean check = false;
-        if(!roomsList.isEmpty()){
+        if (!roomsList.isEmpty()) {
             try {
                 while (!check) {
                     send("choose room | invite user to room | exit");
@@ -137,17 +143,21 @@ public class UserMenu extends LoginMenu{
                 e.printStackTrace();
                 send("Something went wrong");
             }
-        }else send("There is nothing to show");
+        } else {
+            send("There is nothing to show");
+        }
     }
 
     protected void findUser() throws IOException {
         send("Enter username");
         String name = input.readLine();
         User user;
-        if ((user = crud.findByName(name)) != null) {
-            send(user.getName() + " is " + user.getStatus());
-        } else {
-            send("User " + name + " not found");
+        try {
+            if ((user = crud.findByName(name)) != null) {
+                send(user.getName() + " is " + user.getStatus());
+            }
+        } catch (InvalidUserException e) {
+            send(e.getMessage());
         }
     }
 
@@ -320,31 +330,36 @@ public class UserMenu extends LoginMenu{
         send("Enter user name");
         String username = input.readLine();
         User usertoInvite;
-        if ((usertoInvite = crud.findByName(username)) != null && usertoInvite.getStatus()
-            .equals(Status.ONLINE)) {
-            Room r = null;
-            send("Enter room title");
-            String title = input.readLine();
-            for (Room room : roomsList) {
-                if (room.getTitle().equals(title)) {
-                    r = room;
-                    sendInvitation(this.user, usertoInvite, r);
-                    send("User was invited");
-                    break;
+        try {
+            if ((usertoInvite = crud.findByName(username)) != null && usertoInvite.getStatus()
+                .equals(Status.ONLINE)) {
+                Room r = null;
+                send("Enter room title");
+                String title = input.readLine();
+                for (Room room : roomsList) {
+                    if (room.getTitle().equals(title)) {
+                        r = room;
+                        sendInvitation(this.user, usertoInvite, r);
+                        send("User was invited");
+                        break;
+                    }
                 }
+                if (r == null) {
+                    send("Room not found");
+                }
+            } else {
+                send("User are not online");
             }
-            if (r == null) {
-                send("Room not found");
-            }
-        } else {
-            send("User not found or not online");
+        } catch (InvalidUserException ex) {
+            send(ex.getMessage());
         }
     }
 
     protected void sendInvitation(User fromWho, User toWho, Room room) {
         for (SideServer ss : Server.serverList) {
             if (ss.user.equals(toWho)) {
-                logger.info("User " + fromWho.getName() + "sent invitation to " + toWho.getName() + "in room " + room.getTitle());
+                logger.info("User " + fromWho.getName() + "sent invitation to " + toWho.getName()
+                    + "in room " + room.getTitle());
                 ss.invitations.add(new Invitation(fromWho, toWho, room));
                 break;
             }
@@ -384,7 +399,10 @@ public class UserMenu extends LoginMenu{
                             break;
                         case 2:
                             invitations.remove(invite);
-                            logger.info("User " + user.getName() + "deleted invitation from " + invite.getFromWho().getName() + "in room " + invite.getRoom().getTitle());
+                            logger.info(
+                                "User " + user.getName() + "deleted invitation from " + invite
+                                    .getFromWho().getName() + "in room " + invite.getRoom()
+                                    .getTitle());
                             send("Invitation was deleted");
                             break;
                     }

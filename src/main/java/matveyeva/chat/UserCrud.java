@@ -1,15 +1,20 @@
 package matveyeva.chat;
 
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.exception.InvalidUserException;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import matveyeva.chat.Entity.User;
+import matveyeva.chat.exception.InvalidUserException;
 
 public class UserCrud {
-    public static Set<User> users;
+    private final Validator validator = new Validator();
+    public volatile static Set<User> users;
 
     public UserCrud(){
         try {
@@ -19,49 +24,51 @@ public class UserCrud {
         }
     }
 
-    public User create(String str){
-        try{
-            User user = split(str);
-            if(users.add(user))
-                return user;
-            else return null;
-        }catch (InvalidUserException | IllegalArgumentException  ex){
-            System.out.println(ex.getMessage());
-            return null;
+    public User create(String str) throws InvalidUserException {
+        User user = split(str);
+        for(User u : users){
+            if(u.getName().equals(user.getName())){
+                throw new InvalidUserException("User already exists");
+            }
         }
+        users.add(user);
+        return user;
+
     }
 
-    public void delete(User user) throws Exception{
+    public void delete(User user) throws IOException{
         users.remove(user);
         reloadUsers();
     }
 
-    public void deleteAll() throws Exception{
+    public void deleteAll() throws IOException{
         ArrayList<User> arr = new ArrayList<User>(users);
         users.removeAll(arr);
         reloadUsers();
     }
 
-    public User update(User oldUser, String newUser){
-        try{
-            User user = split(newUser);
-            users.remove(oldUser);
-            users.add(user);
-//            reloadUsers();
-            return user;
-        }catch(InvalidUserException ex){
-            System.out.println(ex.getMessage());
-            return null;
+    public User update(User oldUser, String newUser) throws InvalidUserException{
+
+        User user = split(newUser);
+        for(User u : users){
+            if(u.equals(user)){
+                throw new InvalidUserException("User already exists");
+            }
         }
+        user.setStatus(oldUser.getStatus());
+        user.setRole(oldUser.getRole());
+        users.remove(oldUser);
+        users.add(user);
+        return user;
     }
 
-    public User findByName(String name) {
+    public User findByName(String name) throws InvalidUserException{
         for(User user : users){
             if(user.getName().equals(name)) {
                 return user;
             }
         }
-        return null;
+        throw new InvalidUserException("User not found");
     }
 
     public void setUserStatus(User user){
@@ -105,28 +112,29 @@ public class UserCrud {
         String[] userstr = str.split(",");
         if(userstr.length == 2){
             User user = new User(userstr[0], userstr[1]);
-            user.isUserValid();
-            if(user.getName().equalsIgnoreCase("admin")){
+            if(!validator.checkPersonData(user.getName())){
+                throw new InvalidUserException("Incorrect user name. Name should has from 3 to 15 characters and contains only letters and numerals");
+            }else if(!validator.checkPersonData(user.getPassword())){
+                throw new InvalidUserException("Incorrect user password. Password should has from 3 to 15 characters and contains only letters and numerals");
+            }
+            if (user.getName().equalsIgnoreCase("admin")) {
                 user.setRole("ADMIN");
             }
             return user;
         }else throw new InvalidUserException("Incorrect user data");
     }
 
-    public User findOne(String namePass) {
-        try{
-            User user = split(namePass);
-            if(users.contains(user)){
-                for(User u : users) {
-                    if(user.equals(u)) {
-                        user = u;
-                    }
+    public User findOne(String namePass) throws InvalidUserException{
+        User user = split(namePass);
+        if(users.contains(user)){
+            for(User u : users) {
+                if(user.equals(u)) {
+                    user = u;
                 }
-                return user;
-            }else return null;
-        }catch (InvalidUserException ex){
-            return null;
-        }
+            }
+            return user;
+        }else throw new InvalidUserException("User not exists");
+
     }
 
 }
