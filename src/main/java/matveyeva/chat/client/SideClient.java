@@ -15,10 +15,8 @@ public class SideClient {
     private BufferedReader input;
     private BufferedWriter output;
     private Scanner scanner;
-    private static final org.apache.log4j.Logger logger  = Logger.getLogger(Client.class);
 
     public SideClient(Socket socket) {
-        logger.info("Client was created");
         this.socket = socket;
         scanner = new Scanner(System.in);
         try {
@@ -37,7 +35,6 @@ public class SideClient {
                 socket.close();
                 input.close();
                 output.close();
-                logger.info("Client was closed");
                 System.exit(0);
             }
         } catch (IOException ignored) {}
