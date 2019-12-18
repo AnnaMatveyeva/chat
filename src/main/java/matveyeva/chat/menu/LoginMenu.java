@@ -10,8 +10,10 @@ import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
 import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
+import matveyeva.chat.client.Client;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
+import org.apache.log4j.Logger;
 
 public class LoginMenu {
 
@@ -24,6 +26,7 @@ public class LoginMenu {
     protected List<Room> roomsList;
     protected List<Invitation> invitations;
     protected SideServer thisSide;
+    private static final org.apache.log4j.Logger logger  = Logger.getLogger(LoginMenu.class);
 
     public LoginMenu(BufferedReader input, BufferedWriter output, UserCrud crud,
         User user, List<Message> publicMessagesList,
@@ -59,9 +62,11 @@ public class LoginMenu {
                             this.user.setStatus(User.Status.ONLINE);
                             crud.setUserStatus(this.user);
                             if(user.getRole().equalsIgnoreCase("USER")){
+                                logger.info("User " + this.user.getName() + " logged in");
                                 UserMenu userMenu = new UserMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations, thisSide);
                                 userMenu.showMainMenu();
                             }else if(user.getRole().equalsIgnoreCase("ADMIN")){
+                                logger.info("Admin " + this.user.getName() + " logged in");
                                 AdminMenu adminMenu = new AdminMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations,thisSide);
                                 adminMenu.showMainMenu();
                             }
@@ -76,9 +81,11 @@ public class LoginMenu {
                             this.user.setStatus(User.Status.ONLINE);
                             crud.setUserStatus(this.user);
                             if(user.getRole().equalsIgnoreCase("USER")){
+                                logger.info("User " + this.user.getName() + " was created and logged in");
                                 UserMenu userMenu = new UserMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations, thisSide);
                                 userMenu.showMainMenu();
                             }else if(user.getRole().equalsIgnoreCase("ADMIN")){
+                                logger.info("Admin " + this.user.getName() + "was created and logged in");
                                 AdminMenu adminMenu = new AdminMenu(input,output,crud,user,publicMessagesList,privateMessages,roomsList,invitations,thisSide);
                                 adminMenu.showMainMenu();
                             }
@@ -128,6 +135,7 @@ public class LoginMenu {
         if (this.user != null && !this.user.getStatus().equals(Status.BANNED)) {
             this.user.setStatus(User.Status.OFFLINE);
             crud.setUserStatus(this.user);
+            logger.info("User " + user.getName() + " logged off");
         }
         crud.reloadUsers();
         this.user = null;

@@ -5,15 +5,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import matveyeva.chat.menu.LoginMenu;
+import org.apache.log4j.Logger;
 
 public class Server {
 
     public static final int PORT = 8080;
     public static List<SideServer> serverList = new ArrayList<>();
+    private static final org.apache.log4j.Logger logger  = Logger.getLogger(Server.class);
 
     public static void main(String[] args) throws IOException {
         ServerSocket server = new ServerSocket(PORT);
-        System.out.println("Server Started");
+        logger.info("Server started");
 
         try {
             while (true) {
@@ -27,6 +30,7 @@ public class Server {
                 }
             }
         } finally {
+            logger.info("Server closed");
             server.close();
         }
     }

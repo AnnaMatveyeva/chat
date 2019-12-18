@@ -13,9 +13,11 @@ import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
+import org.apache.log4j.Logger;
 
 public class AdminMenu extends UserMenu {
 
+    private static final org.apache.log4j.Logger logger  = Logger.getLogger(LoginMenu.class);
 
     public AdminMenu(BufferedReader input, BufferedWriter output, UserCrud crud,
         User user, List<Message> publicMessagesList,
@@ -160,6 +162,7 @@ public class AdminMenu extends UserMenu {
             String str = input.readLine();
 
             if (str.equals("1")) {
+                logger.info("Admin " + user.getName() + " made admin user " + userToAdmin.getName());
                 userToAdmin.setRole("ADMIN");
                 for (User u : UserCrud.users) {
                     if (u.equals(userToAdmin)) {
@@ -210,6 +213,7 @@ public class AdminMenu extends UserMenu {
                         }
                         serverToShut.exit("You are banned");
                     }
+                    logger.info("Admin " + user.getName() + " banned user " + usertoBan.getName() + " with role " + usertoBan.getRole());
                     break;
                 case 2:
                     break;
@@ -239,6 +243,7 @@ public class AdminMenu extends UserMenu {
                         }
                         serverToShut.exit("You are deleted");
                     }
+                    logger.info("Admin " + user.getName() + " deleted user " + usertoDelete.getName() + " with role " + usertoDelete.getRole());
                     crud.delete(usertoDelete);
                     break;
                 case 2:
@@ -258,6 +263,7 @@ public class AdminMenu extends UserMenu {
             send("Enter new username,password");
             String str = input.readLine();
             crud.update(usertoUpdate, str);
+            logger.info("Admin " + user.getName() + " updated user " + usertoUpdate.getName() + " with role " + usertoUpdate.getRole());
             if (usertoUpdate.getStatus().equals(User.Status.ONLINE)) {
                 SideServer serverToShut = null;
                 for (SideServer server : Server.serverList) {
@@ -318,6 +324,7 @@ public class AdminMenu extends UserMenu {
         if (r == null) {
             r = new Room(title);
             roomsList.add(r);
+            logger.info("Admin " + user.getName() + " created room " + r.getTitle());
             send("Room \"" + title + "\" was created");
         } else {
             send("Room with title \"" + title + "\" already exists");
@@ -346,6 +353,7 @@ public class AdminMenu extends UserMenu {
             if (room.getTitle().equals(title)) {
                 room.setTitle(str);
                 r = room;
+                logger.info("Admin " + user.getName() + " change room title from " + title + " to " + r.getTitle());
                 break;
             }
         }
@@ -371,10 +379,11 @@ public class AdminMenu extends UserMenu {
 
             String answer = input.readLine();
             if (answer.equals("1")) {
+                logger.info("Admin " + user.getName() + " deleted room " + r.getTitle());
                 r.getMessages().add(new Message(this.user, "DELETE"));
                 roomsList.remove(r);
+                send("room was deleted");
             }
-            send("room was deleted");
         } else {
             send("Room not found");
         }

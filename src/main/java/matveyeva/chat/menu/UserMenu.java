@@ -15,8 +15,10 @@ import matveyeva.chat.Entity.User.Status;
 import matveyeva.chat.UserCrud;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
+import org.apache.log4j.Logger;
 
 public class UserMenu extends LoginMenu{
+    private static final org.apache.log4j.Logger logger  = Logger.getLogger(UserMenu.class);
 
     public UserMenu(BufferedReader input, BufferedWriter output, UserCrud crud,
         User user, List<Message> publicMessagesList,
@@ -82,6 +84,7 @@ public class UserMenu extends LoginMenu{
     }
 
     protected void showPublicChat() throws IOException {
+        logger.info("User " + user.getName() + " opened public chat");
         List<Message> pubMessages = new ArrayList<>(publicMessagesList);
         for (Message mess : pubMessages) {
             send(mess.toString());
@@ -106,6 +109,7 @@ public class UserMenu extends LoginMenu{
                 }
             }
         }
+        logger.info("User " + user.getName() + " closed public chat");
     }
 
     protected void showRoomMenu() {
@@ -162,6 +166,7 @@ public class UserMenu extends LoginMenu{
     }
 
     protected void toPrivateChat(User friend) throws IOException {
+        logger.info("User " + user.getName() + " opened private chat with " + friend.getName());
         send("Chat with " + friend.getName());
         List<Message> messages = new ArrayList<Message>(privateMessages);
         for (Message mess : messages) {
@@ -192,6 +197,7 @@ public class UserMenu extends LoginMenu{
                 }
             }
         }
+        logger.info("User " + user.getName() + " exit from private chat with " + friend.getName());
     }
 
     protected void sendTo(User friend, Message message) {
@@ -269,6 +275,7 @@ public class UserMenu extends LoginMenu{
     }
 
     protected void toRoom(Room room) throws IOException {
+        logger.info("User " + user.getName() + " opened room" + room.getTitle());
         send("You are in " + room.getTitle() + " room, write \"exit\" to return");
         List<Message> messages = new ArrayList<Message>(room.getMessages());
         if (!messages.isEmpty()) {
@@ -306,6 +313,7 @@ public class UserMenu extends LoginMenu{
                 }
             }
         }
+        logger.info("User " + user.getName() + " exit from " + room.getTitle() + " room");
     }
 
     protected void inviteUser() throws IOException {
@@ -336,6 +344,7 @@ public class UserMenu extends LoginMenu{
     protected void sendInvitation(User fromWho, User toWho, Room room) {
         for (SideServer ss : Server.serverList) {
             if (ss.user.equals(toWho)) {
+                logger.info("User " + fromWho.getName() + "sent invitation to " + toWho.getName() + "in room " + room.getTitle());
                 ss.invitations.add(new Invitation(fromWho, toWho, room));
                 break;
             }
@@ -375,6 +384,7 @@ public class UserMenu extends LoginMenu{
                             break;
                         case 2:
                             invitations.remove(invite);
+                            logger.info("User " + user.getName() + "deleted invitation from " + invite.getFromWho().getName() + "in room " + invite.getRoom().getTitle());
                             send("Invitation was deleted");
                             break;
                     }
