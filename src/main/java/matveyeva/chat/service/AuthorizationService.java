@@ -32,8 +32,7 @@ public class AuthorizationService extends DefaultService {
 
     public void login(BufferedReader input, BufferedWriter output,
         User user, List<Message> publicMessagesList,
-        List<Message> privateMessages, List<Room> roomsList,
-        List<Invitation> invitations, SideServer thisSide) {
+        List<Message> privateMessages, SideServer thisSide) {
         try {
             send("Enter username,password", output);
             String namePass = input.readLine();
@@ -43,16 +42,14 @@ public class AuthorizationService extends DefaultService {
             crud.setUserStatus(user);
             if (user.getRole().equalsIgnoreCase("USER")) {
                 logger.info("User " + user.getName() + " logged in");
-                UserMenu userMenu = new UserMenu(input, output, user,
-                    publicMessagesList, privateMessages, roomsList, invitations,
+                UserMenu userMenu = new UserMenu(input, output, privateMessages,
                     thisSide);
-                userMenu.showMenu();
+                userMenu.showMenu(user);
             } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
                 logger.info("Admin " + user.getName() + " logged in");
-                AdminMenu adminMenu = new AdminMenu(input, output, user,
-                    publicMessagesList, privateMessages, roomsList, invitations,
-                    thisSide);
-                adminMenu.showMenu();
+                AdminMenu adminMenu = new AdminMenu(input, output,
+                    privateMessages, thisSide);
+                adminMenu.showMenu(user);
 
             }
         } catch (IOException ex) {
@@ -86,9 +83,7 @@ public class AuthorizationService extends DefaultService {
     }
 
     public void registration(BufferedReader input, BufferedWriter output,
-        User user, List<Message> publicMessagesList,
-        List<Message> privateMessages, List<Room> roomsList,
-        List<Invitation> invitations, SideServer thisSide) {
+        User user, List<Message> privateMessages, SideServer thisSide) {
         try {
             send("Create new  username,password", output);
             String newUser = input.readLine();
@@ -99,18 +94,14 @@ public class AuthorizationService extends DefaultService {
             if (user.getRole().equalsIgnoreCase("USER")) {
                 logger.info("User " + user.getName()
                     + " was created and logged in");
-                UserMenu userMenu = new UserMenu(input, output, user,
-                    publicMessagesList, privateMessages, roomsList, invitations,
-                    thisSide);
-                userMenu.showMenu();
+                UserMenu userMenu = new UserMenu(input, output, privateMessages, thisSide);
+                userMenu.showMenu(user);
             } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
                 logger
                     .info("Admin " + user.getName()
                         + "was created and logged in");
-                AdminMenu adminMenu = new AdminMenu(input, output, user,
-                    publicMessagesList, privateMessages, roomsList, invitations,
-                    thisSide);
-                adminMenu.showMenu();
+                AdminMenu adminMenu = new AdminMenu(input, output, privateMessages, thisSide);
+                adminMenu.showMenu(user);
             }
 
         } catch (IOException ex) {

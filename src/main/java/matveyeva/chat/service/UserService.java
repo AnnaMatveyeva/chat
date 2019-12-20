@@ -1,6 +1,5 @@
 package matveyeva.chat.service;
 
-import com.sun.org.apache.bcel.internal.generic.BREAKPOINT;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -8,12 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import matveyeva.chat.Entity.Invitation;
 import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
+import matveyeva.chat.enums.PublicMessages;
 import matveyeva.chat.exception.InvalidUserException;
+import matveyeva.chat.menu.RoomMenu;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
@@ -31,17 +29,19 @@ public class UserService extends DefaultService {
         return instance;
     }
 
-    public void showPublicChat(BufferedWriter output, BufferedReader input, User user,
-        List<Message> publicMessagesList) throws IOException {
+    public void showPublicChat(BufferedWriter output, BufferedReader input, User user)
+        throws IOException {
         logger.info("User " + user.getName() + " opened public chat");
-        List<Message> pubMessages = new ArrayList<>(publicMessagesList);
+        List<Message> pubMessages = new ArrayList<>(PublicMessages.INSTANCE.getPublicMessages());
         for (Message mess : pubMessages) {
             send(mess.toString(), output);
         }
+
         while (true) {
-            if (publicMessagesList.size() != pubMessages.size()) {
-                for (int i = pubMessages.size(); i < publicMessagesList.size(); i++) {
-                    Message mess = publicMessagesList.get(i);
+            if (PublicMessages.INSTANCE.getPublicMessages().size() != pubMessages.size()) {
+                for (int i = pubMessages.size();
+                    i < PublicMessages.INSTANCE.getPublicMessages().size(); i++) {
+                    Message mess = PublicMessages.INSTANCE.getPublicMessages().get(i);
                     pubMessages.add(mess);
                     send(mess.toString(), output);
                 }
@@ -50,7 +50,7 @@ public class UserService extends DefaultService {
                 String str = input.readLine();
                 if (!str.equalsIgnoreCase("exit")) {
                     Message newMess = new Message(user, str);
-                    publicMessagesList.add(newMess);
+                    PublicMessages.INSTANCE.getPublicMessages().add(newMess);
 
                 } else {
                     send("Exit from public chat", output);
@@ -61,211 +61,9 @@ public class UserService extends DefaultService {
         logger.info("User " + user.getName() + " closed public chat");
     }
 
-    public void showRoomMenu(BufferedWriter output, BufferedReader input, User user,
-        List<Room> roomsList) {
-        boolean check = false;
-        if (!roomsList.isEmpty()) {
-            try {
-                while (!check) {
-                    send("choose room | invite user to room | exit", output);
-                    String answer = input.readLine();
-                    switch (Integer.parseInt(answer)) {
-                        case 1:
-                            showRooms(user, roomsList, input, output);
-                            break;
-                        case 2:
-                            inviteUser(output, input, roomsList, user);
-                            break;
-                        case 3:
-                            check = true;
-                            break;
-                    }
-                }
-            } catch (NumberFormatException ex) {
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                send("Something went wrong", output);
-            }
-        } else {
-            send("There is nothing to show", output);
-        }
-    }
-
-    public void showRooms(User user, List<Room> roomsList, BufferedReader input,
-        BufferedWriter output) {
-        if (!roomsList.isEmpty()) {
-            boolean check = false;
-            try {
-                while (!check) {
-
-                    Map<String, Room> rMap = new HashMap<String, Room>();
-                    StringBuilder str = new StringBuilder();
-                    if (!roomsList.isEmpty()) {
-                        for (int i = 0; i < roomsList.size(); i++) {
-                            rMap.put(String.valueOf(i + 1), roomsList.get(i));
-                            str.append(roomsList.get(i).getTitle() + " | ");
-                        }
-                        str.append(" wite \"exit\" to return");
-                        send(str.toString(), output);
-                    } else {
-                        break;
-                    }
-
-                    String answer = input.readLine();
-                    if (rMap.containsKey(answer)) {
-                        Room room = rMap.get(answer);
-                        toRoom(room, user, output, input);
-
-                        check = true;
-                    } else if (answer.equals("exit")) {
-                        check = true;
-                    }
-                }
-            } catch (NumberFormatException | IOException ex) {
-            }
-        } else {
-            send("There are no rooms", output);
-        }
-    }
-
-    public void toRoom(Room room, User user, BufferedWriter output, BufferedReader input)
-        throws IOException {
-        room.getUsers().add(user);
-
-        logger.info("User " + user.getName() + " opened room" + room.getTitle());
-        send("You are in " + room.getTitle() + " room, write \"exit\" to return", output);
-
-        List<Message> messages = new ArrayList<Message>(room.getMessages());
-        if (!messages.isEmpty()) {
-            for (Message mess : messages) {
-                send(mess.toString(), output);
-            }
-        } else {
-            send("There are no messages", output);
-        }
-        boolean check = false;
-        while (!check) {
-            if (room.getMessages().size() != messages.size()) {
-                for (int i = messages.size(); i < room.getMessages().size(); i++) {
-
-                    Message mess = room.getMessages().get(i);
-                    messages.add(mess);
-                    send(mess.toString(), output);
-                    if (mess.getUser().getRole().equals("ADMIN") && mess.getText()
-                        .equals("DELETE")) {
-                        send("This room was deleted by admin", output);
-
-                        check = true;
-                        break;
-                    }
-                }
-            }
-            if (input.ready()) {
-                String str = input.readLine();
-                if (!str.equalsIgnoreCase("exit")) {
-                    Message newMess = new Message(user, str);
-                    room.getMessages().add(newMess);
-                } else {
-                    send("Exit from " + room.getTitle() + " room", output);
-                    room.getUsers().remove(user);
-                    check = true;
-                }
-            }
-        }
-        logger.info("User " + user.getName() + " exit from " + room.getTitle() + " room");
-    }
-
-    public void inviteUser(BufferedWriter output, BufferedReader input, List<Room> roomsList,
-        User user) throws IOException {
-        send("Enter user name", output);
-        String username = input.readLine();
-        User usertoInvite;
-        try {
-            usertoInvite = crud.findByName(username);
-            if (usertoInvite.getStatus().equals(Status.ONLINE)) {
-                Room r = null;
-                send("Enter room title", output);
-                String title = input.readLine();
-                for (Room room : roomsList) {
-                    if (room.getTitle().equals(title)) {
-                        r = room;
-                        sendInvitation(user, usertoInvite, r);
-                        send("User was invited", output);
-                        break;
-                    }
-                }
-                if (r == null) {
-                    send("Room not found", output);
-                }
-            } else {
-                send("User are not online", output);
-            }
-        } catch (InvalidUserException ex) {
-            send(ex.getMessage(), output);
-        }
-    }
-
-    public void sendInvitation(User fromWho, User toWho, Room room) {
-        for (SideServer ss : Server.serverList) {
-            if (ss.user.equals(toWho)) {
-                logger.info("User " + fromWho.getName() + " sent invitation to " + toWho.getName()
-                    + "in room " + room.getTitle());
-                ss.invitations.add(new Invitation(fromWho, toWho, room));
-                break;
-            }
-        }
-    }
-
-    public void showInvitations(List<Invitation> invitations, BufferedWriter output,
-        BufferedReader input, User user) throws IOException {
-        boolean check = false;
-        if (!invitations.isEmpty()) {
-            while (!check) {
-                if (invitations.isEmpty()) {
-                    check = true;
-                }
-                StringBuilder str = new StringBuilder();
-                Map<String, Invitation> iMap = new HashMap<>();
-                for (int i = 0; i < invitations.size(); i++) {
-                    str.append(
-                        "to " + invitations.get(i).getRoom().getTitle() + " from " + invitations
-                            .get(i)
-                            .getFromWho().getName() + "; ");
-                    iMap.put(String.valueOf(i + 1), invitations.get(i));
-                }
-                send(str.toString(), output);
-                String answer = input.readLine();
-
-                if (answer.equalsIgnoreCase("exit")) {
-                    check = true;
-                }
-
-                if (iMap.containsKey(answer)) {
-                    Invitation invite = iMap.get(answer);
-                    send(invite.toString(), output);
-                    send("to room | delete invitation | return", output);
-                    String choice = input.readLine();
-                    switch (Integer.parseInt(choice)) {
-                        case 1:
-                            toRoom(invite.getRoom(), user, output, input);
-                            invitations.remove(invite);
-                            check = true;
-                            break;
-                        case 2:
-                            invitations.remove(invite);
-                            logger.info(
-                                "User " + user.getName() + "deleted invitation from " + invite
-                                    .getFromWho().getName() + " in room " + invite.getRoom()
-                                    .getTitle());
-                            send("Invitation was deleted", output);
-                            break;
-                    }
-                }
-            }
-        } else {
-            send("Nothing to show", output);
-        }
+    public void showRoomMenu(BufferedWriter output, BufferedReader input, User user) {
+        RoomMenu roomMenu = new RoomMenu(output,input);
+        roomMenu.showMenu(user);
     }
 
     public void findUser(BufferedWriter output, BufferedReader input) throws IOException {
@@ -295,7 +93,8 @@ public class UserService extends DefaultService {
         }
     }
 
-    public void sendMessageTo(BufferedWriter output, BufferedReader input, User user, List<Message> privateMessages){
+    public void sendMessageTo(BufferedWriter output, BufferedReader input, User user,
+        List<Message> privateMessages) {
         send("Enter username", output);
         User friend;
         try {
@@ -303,7 +102,9 @@ public class UserService extends DefaultService {
             friend = crud.findByName(username);
             if (friend.getStatus().equals(User.Status.ONLINE)) {
                 toPrivateChat(friend, user, output, input, privateMessages);
-            }else send(friend.getName() + " is not online", output);
+            } else {
+                send(friend.getName() + " is not online", output);
+            }
         } catch (InvalidUserException ex) {
             send(ex.getMessage(), output);
         } catch (IOException e) {
@@ -388,4 +189,11 @@ public class UserService extends DefaultService {
         }
     }
 
+    public void showInvitations(BufferedWriter output, BufferedReader input, User user) {
+        try {
+            InvitationService.getInstance().showInvitations(output,input,user);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

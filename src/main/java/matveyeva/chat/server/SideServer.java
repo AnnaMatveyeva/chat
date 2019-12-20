@@ -8,12 +8,8 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import matveyeva.chat.Entity.Invitation;
 import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
-import matveyeva.chat.enums.PublicMessages;
-import matveyeva.chat.enums.Rooms;
 import matveyeva.chat.menu.LoginMenu;
 
 public class SideServer extends Thread {
@@ -22,17 +18,11 @@ public class SideServer extends Thread {
     private BufferedReader input;
     private BufferedWriter output;
     public User user;
-    private List<Message> publicMessagesList;
     public volatile List<Message> privateMessages;
-    private List<Room> roomsList;
-    public volatile List<Invitation> invitations;
 
     public SideServer(Socket socket) {
         this.socket = socket;
-        publicMessagesList = PublicMessages.INSTANCE.getPublicMessages();
         privateMessages = new ArrayList<>();
-        invitations = new ArrayList<>();
-        roomsList = Rooms.INSTANCE.getRoomsList();
 
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -47,9 +37,8 @@ public class SideServer extends Thread {
     public void run() {
         while (true) {
 
-            LoginMenu loginMenu = new LoginMenu(input, output, user, publicMessagesList,
-                privateMessages, roomsList, invitations, this);
-            loginMenu.showMenu();
+            LoginMenu loginMenu = new LoginMenu(input, output,privateMessages, this);
+            loginMenu.showMenu(user);
         }
     }
 

@@ -4,11 +4,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.List;
-import matveyeva.chat.Entity.Invitation;
 import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
-import matveyeva.chat.UserCrud;
+import matveyeva.chat.enums.Invitations;
 import matveyeva.chat.server.SideServer;
 import matveyeva.chat.service.UserService;
 import org.apache.log4j.Logger;
@@ -18,16 +16,13 @@ public class UserMenu extends LoginMenu {
     private static final org.apache.log4j.Logger logger = Logger.getLogger(UserMenu.class);
 
     public UserMenu(BufferedReader input, BufferedWriter output,
-        User user, List<Message> publicMessagesList,
-        List<Message> privateMessages, List<Room> roomsList,
-        List<Invitation> invitations, SideServer thisSide) {
-        super(input, output, user, publicMessagesList, privateMessages, roomsList,
-            invitations, thisSide);
+        List<Message> privateMessages, SideServer thisSide) {
+        super(input, output, privateMessages,thisSide);
     }
 
     private UserService userService = UserService.getInstance();
 
-    public void showMenu() {
+    public void showMenu(User user) {
         try {
             boolean check = false;
             while (!check) {
@@ -36,16 +31,16 @@ public class UserMenu extends LoginMenu {
                 }
                 userService.send(
                     "to public chat | to rooms | find user | see connected users | send message to.. | check private messages | invitations "
-                        + invitations.size() + " | logoff | exit |", output);
+                        + Invitations.INSTANCE.checkInvitationsByUser(user) + " | logoff | exit |", output);
 
                 String answer = input.readLine();
                 switch (Integer.parseInt(answer)) {
                     case 1:
                         userService.send("Public chat:", output);
-                        userService.showPublicChat(output, input, user, publicMessagesList);
+                        userService.showPublicChat(output, input, user);
                         break;
                     case 2:
-                        userService.showRoomMenu(output, input, user, roomsList);
+                        userService.showRoomMenu(output, input, user);
                         break;
                     case 3:
                         userService.findUser(output, input);
@@ -60,7 +55,7 @@ public class UserMenu extends LoginMenu {
                         userService.showPrivateMessages(user, privateMessages, output, input);
                         break;
                     case 7:
-                        userService.showInvitations(invitations, output, input, user);
+                        userService.showInvitations(output, input, user);
                         break;
                     case 8:
                         userService.exit("You logged off", user, thisSide, output);
