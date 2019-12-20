@@ -8,33 +8,30 @@ import matveyeva.chat.Entity.Invitation;
 import matveyeva.chat.Entity.Message;
 import matveyeva.chat.Entity.Room;
 import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
-import matveyeva.chat.UserCrud;
-import matveyeva.chat.exception.InvalidUserException;
-import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
+import matveyeva.chat.service.AuthorizationService;
 import org.apache.log4j.Logger;
 
-public class LoginMenu {
+public class LoginMenu implements Menu {
 
     protected BufferedReader input;
     protected BufferedWriter output;
-    protected UserCrud crud;
     protected User user;
     protected volatile List<Message> publicMessagesList;
     protected volatile List<Message> privateMessages;
     protected volatile List<Room> roomsList;
     protected volatile List<Invitation> invitations;
     protected SideServer thisSide;
-    private static final org.apache.log4j.Logger logger  = Logger.getLogger(LoginMenu.class);
+    private static final org.apache.log4j.Logger logger = Logger.getLogger(LoginMenu.class);
+    private AuthorizationService authService = AuthorizationService.getInstance();
 
-    public LoginMenu(BufferedReader input, BufferedWriter output, UserCrud crud,
+
+    public LoginMenu(BufferedReader input, BufferedWriter output,
         User user, List<Message> publicMessagesList,
         List<Message> privateMessages, List<Room> roomsList,
         List<Invitation> invitations, SideServer thisSide) {
         this.input = input;
         this.output = output;
-        this.crud = crud;
         this.user = user;
         this.publicMessagesList = publicMessagesList;
         this.privateMessages = privateMessages;
@@ -43,124 +40,36 @@ public class LoginMenu {
         this.thisSide = thisSide;
     }
 
-    public void loginMenu() throws IOException {
+    public void showMenu() {
         boolean check = false;
         while (!check) {
             try {
                 if (thisSide.isInterrupted()) {
                     break;
                 }
-                send("login | registration | exit");
+                authService.send("login | registration | exit", output);
                 String answer = input.readLine();
                 switch (Integer.parseInt(answer)) {
                     case 1:
-                        send("Enter username,password");
-                        String namePass = input.readLine();
-                        if(login(namePass)) {
-                            this.user.setStatus(User.Status.ONLINE);
-                            crud.setUserStatus(this.user);
-                            if (user.getRole().equalsIgnoreCase("USER")) {
-                                logger.info("User " + this.user.getName() + " logged in");
-                                UserMenu userMenu = new UserMenu(input, output, crud, user,
-                                    publicMessagesList, privateMessages, roomsList, invitations,
-                                    thisSide);
-                                userMenu.showMainMenu();
-                            } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
-                                logger.info("Admin " + this.user.getName() + " logged in");
-                                AdminMenu adminMenu = new AdminMenu(input, output, crud, user,
-                                    publicMessagesList, privateMessages, roomsList, invitations,
-                                    thisSide);
-                                adminMenu.showMainMenu();
-                            }
-                        }
+                        authService.login(input, output, user,
+                            publicMessagesList, privateMessages, roomsList, invitations,
+                            thisSide);
                         break;
                     case 2:
-                        send("Create new  username,password");
-                        String newUser = input.readLine();
-                        if(registration(newUser)) {
-                            this.user.setStatus(User.Status.ONLINE);
-                            crud.setUserStatus(this.user);
-                            if (user.getRole().equalsIgnoreCase("USER")) {
-                                logger
-                                    .info("User " + this.user.getName() + " was created and logged in");
-                                UserMenu userMenu = new UserMenu(input, output, crud, user,
-                                    publicMessagesList, privateMessages, roomsList, invitations,
-                                    thisSide);
-                                userMenu.showMainMenu();
-                            } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
-                                logger
-                                    .info("Admin " + this.user.getName() + "was created and logged in");
-                                AdminMenu adminMenu = new AdminMenu(input, output, crud, user,
-                                    publicMessagesList, privateMessages, roomsList, invitations,
-                                    thisSide);
-                                adminMenu.showMainMenu();
-                            }
-                        }
+                        authService.registration(input, output, user,
+                            publicMessagesList, privateMessages, roomsList, invitations,
+                            thisSide);
                         break;
                     case 3:
-                        exit("Exit from application");
+                        authService.exit("Exit from application", user, thisSide, output);
                         check = true;
                         break;
                 }
             } catch (NumberFormatException ex) {
 
+            } catch (IOException ex) {
             }
         }
     }
 
-    protected void send(String msg) {
-        try {
-            output.write(msg + "\n");
-            output.flush();
-        } catch (IOException ex) {
-
-        }
-    }
-    protected boolean login(String namePass) {
-        try {
-            if ((user = crud.findOne(namePass)) != null && this.user.getStatus() != Status.BANNED) {
-                try {
-                    for (SideServer server : Server.serverList) {
-                        if (Server.serverList.size() > 1 && !server.equals(this) && server.user
-                            .equals(this.user)) {
-                            return false;
-                        }
-                    }
-                } catch (NullPointerException ex) {
-                    return true;
-                }
-                return true;
-            } else {
-                return false;
-            }
-        } catch (InvalidUserException e) {
-            send(e.getMessage());
-            return false;
-        }
-
-    }
-
-    protected boolean registration(String newUser) {
-        try {
-            return (user = crud.create(newUser)) != null;
-        } catch (InvalidUserException e) {
-            send(e.getMessage());
-            return false;
-        }
-    }
-    protected void exit(String message) throws IOException {
-        if (this.user != null && !this.user.getStatus().equals(Status.BANNED)) {
-            this.user.setStatus(User.Status.OFFLINE);
-            crud.setUserStatus(this.user);
-            logger.info("User " + user.getName() + " logged off");
-        }
-        crud.reloadUsers();
-        this.user = null;
-        if (message.equalsIgnoreCase("Exit from application") || message.contains("deleted")
-            || message.contains("admin") || message.contains("banned") || message
-            .contains("updated")) {
-            send("Exit from application");
-            thisSide.shutdown();
-        }
-    }
 }

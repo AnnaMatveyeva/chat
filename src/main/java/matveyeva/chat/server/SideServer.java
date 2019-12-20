@@ -9,21 +9,18 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import matveyeva.chat.Entity.Invitation;
-import matveyeva.chat.menu.LoginMenu;
 import matveyeva.chat.Entity.Message;
-import matveyeva.chat.enums.PublicMessages;
 import matveyeva.chat.Entity.Room;
-import matveyeva.chat.enums.Rooms;
 import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
-import matveyeva.chat.UserCrud;
+import matveyeva.chat.enums.PublicMessages;
+import matveyeva.chat.enums.Rooms;
+import matveyeva.chat.menu.LoginMenu;
 
 public class SideServer extends Thread {
 
     private Socket socket;
     private BufferedReader input;
     private BufferedWriter output;
-    private UserCrud crud;
     public User user;
     private List<Message> publicMessagesList;
     public volatile List<Message> privateMessages;
@@ -32,11 +29,11 @@ public class SideServer extends Thread {
 
     public SideServer(Socket socket) {
         this.socket = socket;
-        this.crud = new UserCrud();
         publicMessagesList = PublicMessages.INSTANCE.getPublicMessages();
         privateMessages = new ArrayList<>();
         invitations = new ArrayList<>();
         roomsList = Rooms.INSTANCE.getRoomsList();
+
         try {
             this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -48,14 +45,11 @@ public class SideServer extends Thread {
 
     @Override
     public void run() {
-        try {
-            while (true) {
+        while (true) {
 
-                LoginMenu loginMenu = new LoginMenu(input, output,crud,user,publicMessagesList,privateMessages,roomsList,invitations,this);
-                loginMenu.loginMenu();
-            }
-        } catch (IOException ex) {
-            this.shutdown();
+            LoginMenu loginMenu = new LoginMenu(input, output, user, publicMessagesList,
+                privateMessages, roomsList, invitations, this);
+            loginMenu.showMenu();
         }
     }
 
@@ -77,20 +71,6 @@ public class SideServer extends Thread {
             }
         } catch (IOException ignored) {
             System.out.println(ignored.getMessage());
-        }
-    }
-    public void exit(String message) throws IOException {
-        if (this.user != null && !this.user.getStatus().equals(Status.BANNED)) {
-            this.user.setStatus(User.Status.OFFLINE);
-            crud.setUserStatus(this.user);
-        }
-        crud.reloadUsers();
-        this.user = null;
-        if (message.equalsIgnoreCase("Exit from application") || message.contains("deleted")
-            || message.contains("admin") || message.contains("banned") || message
-            .contains("updated")) {
-            send("Exit from application");
-            this.shutdown();
         }
     }
 
