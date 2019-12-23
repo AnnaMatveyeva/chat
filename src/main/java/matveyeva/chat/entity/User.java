@@ -1,4 +1,4 @@
-package matveyeva.chat.Entity;
+package matveyeva.chat.entity;
 
 import java.io.Serializable;
 import java.util.Objects;

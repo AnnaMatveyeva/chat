@@ -2,7 +2,7 @@ package matveyeva.chat.enums;
 
 import java.util.ArrayList;
 import java.util.List;
-import matveyeva.chat.Entity.Message;
+import matveyeva.chat.entity.Message;
 
 public enum PublicMessages {
     INSTANCE;

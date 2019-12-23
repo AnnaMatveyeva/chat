@@ -4,8 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.List;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.Invitations;
 import matveyeva.chat.server.SideServer;
 import matveyeva.chat.service.UserService;
@@ -24,8 +24,8 @@ public class UserMenu extends LoginMenu {
 
     public void showMenu(User user) {
         try {
-            boolean check = false;
-            while (!check) {
+            boolean checkIfExit = false;
+            while (!checkIfExit) {
                 if (thisSide.isInterrupted()) {
                     break;
                 }
@@ -58,17 +58,19 @@ public class UserMenu extends LoginMenu {
                         userService.showInvitations(output, input, user);
                         break;
                     case 8:
-                        userService.exit("You logged off", user, thisSide, output);
-                        check = true;
+                        userService.exit("You logged off", thisSide, output);
+                        checkIfExit = true;
                         break;
                     case 9:
-                        userService.exit("Exit from application", user, thisSide, output);
-                        check = true;
+                        userService.exit("Exit from application", thisSide, output);
+                        checkIfExit = true;
                         break;
                 }
             }
         }catch (IOException ex){
-
+            userService.send("Something went wrong, try again", output);
+        }catch (NumberFormatException e){
+            userService.send("Wrong input, try again", output);
         }
     }
 }

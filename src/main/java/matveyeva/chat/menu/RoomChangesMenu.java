@@ -2,7 +2,7 @@ package matveyeva.chat.menu;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.service.RoomChangesService;
 import org.apache.log4j.Logger;
 
@@ -21,9 +21,9 @@ public class RoomChangesMenu implements Menu {
 
     @Override
     public void showMenu(User user) {
-        boolean check = false;
+        boolean checkIfExit = false;
         try {
-            while (!check) {
+            while (!checkIfExit) {
                 roomChangesService
                     .send("delete room | update room | see all rooms | create room |exit", output);
                 String answer = input.readLine();
@@ -41,13 +41,13 @@ public class RoomChangesMenu implements Menu {
                         roomChangesService.createRoom(output, input, user);
                         break;
                     case 5:
-                        check = true;
+                        checkIfExit = true;
                         break;
                 }
 
             }
         } catch (NumberFormatException ex) {
-
+            roomChangesService.send("Wrong input, try again", output);
         } catch (Exception e) {
             e.printStackTrace();
             roomChangesService.send("Something went wrong", output);

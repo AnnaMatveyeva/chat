@@ -2,7 +2,7 @@ package matveyeva.chat.enums;
 
 import java.util.ArrayList;
 import java.util.List;
-import matveyeva.chat.Entity.Room;
+import matveyeva.chat.entity.Room;
 
 public enum Rooms {
     INSTANCE;

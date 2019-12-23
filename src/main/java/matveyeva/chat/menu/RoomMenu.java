@@ -2,11 +2,10 @@ package matveyeva.chat.menu;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.Rooms;
 import matveyeva.chat.service.InvitationService;
 import matveyeva.chat.service.RoomService;
-import matveyeva.chat.service.UserChangesService;
 import org.apache.log4j.Logger;
 
 public class RoomMenu implements Menu{
@@ -24,10 +23,10 @@ public class RoomMenu implements Menu{
 
     @Override
     public void showMenu(User user) {
-        boolean check = false;
+        boolean checkIfExit = false;
         if (!Rooms.INSTANCE.getRoomsList().isEmpty()) {
             try {
-                while (!check) {
+                while (!checkIfExit) {
                     roomService.send("choose room | invite user to room | exit", output);
                     String answer = input.readLine();
                     switch (Integer.parseInt(answer)) {
@@ -38,12 +37,12 @@ public class RoomMenu implements Menu{
                             invitationService.inviteUser(output, input, user);
                             break;
                         case 3:
-                            check = true;
+                            checkIfExit = true;
                             break;
                     }
                 }
             } catch (NumberFormatException ex) {
-
+                roomService.send("Wrong input, try again", output);
             } catch (Exception e) {
                 e.printStackTrace();
                 roomService.send("Something went wrong", output);

@@ -3,7 +3,7 @@ package matveyeva.chat.menu;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.service.UserChangesService;
 import org.apache.log4j.Logger;
 
@@ -24,9 +24,9 @@ public class UserChangesMenu implements Menu {
 
     @Override
     public void showMenu(User user) {
-        boolean check = false;
+        boolean checkIfExit = false;
         try {
-            while (!check) {
+            while (!checkIfExit) {
                 userChangesService.send("delete user | update user | ban user | make user admin |exit", output);
                 String answer = input.readLine();
                 switch (Integer.parseInt(answer)) {
@@ -42,13 +42,13 @@ public class UserChangesMenu implements Menu {
                     case 4:
                         userChangesService.makeUserAdmin(output, input, user);
                     case 5:
-                        check = true;
+                        checkIfExit = true;
                         break;
                 }
 
             }
         } catch (NumberFormatException ex) {
-
+            userChangesService.send("Wrong input, try again", output);
         } catch (IOException e) {
             e.printStackTrace();
             userChangesService.send("Something went wrong", output);

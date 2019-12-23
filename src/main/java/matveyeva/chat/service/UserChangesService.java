@@ -3,9 +3,10 @@ package matveyeva.chat.service;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
+import matveyeva.chat.entity.User;
+import matveyeva.chat.entity.User.Status;
 import matveyeva.chat.exception.InvalidUserException;
+import matveyeva.chat.exception.UserExistsException;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
@@ -28,42 +29,39 @@ public class UserChangesService extends DefaultService {
         send("Enter user name", output);
         String username = input.readLine();
         User userToAdmin;
-        try {
-            userToAdmin = crud.findByName(username);
-            if (!userToAdmin.getStatus()
-                .equals(Status.BANNED)) {
-                send("Do you want to make admin " + userToAdmin.getName() +
-                    " with status " + userToAdmin.getStatus(), output);
-                send("Yes | No", output);
-                String str = input.readLine();
 
-                if (str.equals("1")) {
-                    logger.info(
-                        "Admin " + user.getName() + " made admin user " + userToAdmin.getName());
-                    userToAdmin.setRole("ADMIN");
-                    for (User u : crud.findAll()) {
-                        if (u.equals(userToAdmin)) {
-                            u.setRole(userToAdmin.getRole());
-                        }
-                    }
-                    send("User are admin now", output);
-                    if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
-                        SideServer serverToShut = null;
-                        for (SideServer server : Server.serverList) {
-                            if (server.user.equals(userToAdmin)) {
-                                serverToShut = server;
-                            }
-                        }
-                        exit("You are admin now", serverToShut.user, serverToShut, output);
+        userToAdmin = crud.findByName(username);
+        if (userToAdmin == null) {
+            send("User not found", output);
+        } else if (!userToAdmin.getStatus().equals(Status.BANNED)) {
+            send("Do you want to make admin " + userToAdmin.getName() +
+                " with status " + userToAdmin.getStatus(), output);
+            send("Yes | No", output);
+            String answer = input.readLine();
+
+            if (answer.equals("1")) {
+                logger.info(
+                    "Admin " + user.getName() + " made admin user " + userToAdmin.getName());
+                userToAdmin.setRole("ADMIN");
+                for (User u : crud.findAll()) {
+                    if (u.equals(userToAdmin)) {
+                        u.setRole(userToAdmin.getRole());
                     }
                 }
-
-            } else {
-                send("user banned", output);
+                send("User is admin now", output);
+                if (userToAdmin.getStatus().equals(User.Status.ONLINE)) {
+                    for (SideServer server : Server.serverList) {
+                        if (server.user.equals(userToAdmin)) {
+                            exit("You are admin now", server, server.output);
+                        }
+                    }
+                }
             }
-        } catch (InvalidUserException ex) {
-            ex.getMessage();
+
+        } else {
+            send("User is banned", output);
         }
+
 
     }
 
@@ -72,46 +70,44 @@ public class UserChangesService extends DefaultService {
         send("Enter user name", output);
         String username = input.readLine();
         User usertoBan;
-        try {
-            usertoBan = crud.findByName(username);
-            if (!usertoBan.getStatus()
-                .equals(Status.BANNED)) {
-                send("Do you want to ban " + usertoBan.getName() + " with role " + usertoBan
-                    .getRole(), output);
-                send("Yes | No", output);
-                String str = input.readLine();
-                switch (Integer.parseInt(str)) {
-                    case 1:
-                        Status oldStatus = usertoBan.getStatus();
-                        usertoBan.setStatus(User.Status.BANNED);
-                        send("User banned", output);
-                        for (User u : crud.findAll()) {
-                            if (u.equals(usertoBan)) {
-                                u.setStatus(usertoBan.getStatus());
+
+        usertoBan = crud.findByName(username);
+        if (usertoBan == null) {
+            send("User not found", output);
+        } else if (!usertoBan.getStatus()
+            .equals(Status.BANNED)) {
+            send("Do you want to ban " + usertoBan.getName() + " with role " + usertoBan
+                .getRole(), output);
+            send("Yes | No", output);
+            String answer = input.readLine();
+            switch (Integer.parseInt(answer)) {
+                case 1:
+                    Status oldStatus = usertoBan.getStatus();
+                    usertoBan.setStatus(User.Status.BANNED);
+                    send("User banned", output);
+                    for (User u : crud.findAll()) {
+                        if (u.equals(usertoBan)) {
+                            u.setStatus(usertoBan.getStatus());
+                        }
+                    }
+                    if (oldStatus.equals(User.Status.ONLINE)) {
+                        for (SideServer server : Server.serverList) {
+                            if (server.user.equals(usertoBan)) {
+                                exit("You are banned", server, server.output);
                             }
                         }
-                        if (oldStatus.equals(User.Status.ONLINE)) {
-                            SideServer serverToShut = null;
-                            for (SideServer server : Server.serverList) {
-                                if (server.user.equals(usertoBan)) {
-                                    serverToShut = server;
-                                }
-                            }
-                            exit("You are banned", serverToShut.user, serverToShut, output);
-                        }
-                        logger.info(
-                            "Admin " + user.getName() + " banned user " + usertoBan.getName()
-                                + " with role " + usertoBan.getRole());
-                        break;
-                    case 2:
-                        break;
-                }
-            } else {
-                send("User not found or already banned", output);
+                    }
+                    logger.info(
+                        "Admin " + user.getName() + " banned user " + usertoBan.getName()
+                            + " with role " + usertoBan.getRole());
+                    break;
+                case 2:
+                    break;
             }
-        } catch (InvalidUserException ex) {
-            send(ex.getMessage(), output);
+        } else {
+            send("User is already banned", output);
         }
+
     }
 
     public void deleteUser(BufferedWriter output, BufferedReader input, User user)
@@ -119,22 +115,25 @@ public class UserChangesService extends DefaultService {
         send("Enter user name", output);
         String username = input.readLine();
         User usertoDelete;
-        try {
-            usertoDelete = crud.findByName(username);
-            send("Do you want to delete " + usertoDelete.getName() + " with role " + usertoDelete
-                .getRole(), output);
+
+        usertoDelete = crud.findByName(username);
+        if (usertoDelete == null) {
+            send("User not found", output);
+        } else {
+            send(
+                "Do you want to delete " + usertoDelete.getName() + " with role " + usertoDelete
+                    .getRole(), output);
             send("Yes | No", output);
             String str = input.readLine();
 
             if (str.equals("1")) {
                 if (usertoDelete.getStatus().equals(User.Status.ONLINE)) {
-                    SideServer serverToShut = null;
+
                     for (SideServer server : Server.serverList) {
                         if (server.user.equals(usertoDelete)) {
-                            serverToShut = server;
+                            exit("You are deleted", server, server.output);
                         }
                     }
-                    exit("You are deleted", serverToShut.user, serverToShut, output);
                 }
                 logger.info(
                     "Admin " + user.getName() + " deleted user " + usertoDelete.getName()
@@ -142,8 +141,6 @@ public class UserChangesService extends DefaultService {
                 crud.delete(usertoDelete);
                 send("User deleted", output);
             }
-        } catch (InvalidUserException ex) {
-            send(ex.getMessage(), output);
         }
 
     }
@@ -155,26 +152,37 @@ public class UserChangesService extends DefaultService {
         User usertoUpdate;
         try {
             usertoUpdate = crud.findByName(username);
-            if (!usertoUpdate.getStatus().equals(Status.BANNED)) {
-                send("Enter new username,password", output);
-                String str = input.readLine();
-                crud.update(usertoUpdate, str);
+            if (usertoUpdate == null) {
+                send("User not found", output);
+            } else if (!usertoUpdate.getStatus().equals(Status.BANNED)) {
+                send("Create new username", output);
+                String newUserName = input.readLine();
+                send("Create new password", output);
+                String newUserPass = input.readLine();
+                send("Confirm password", output);
+                String newConfirmPass = input.readLine();
+                if (newUserPass.equals(newConfirmPass)) {
+                    crud.update(usertoUpdate, newUserName, newUserPass);
+                } else {
+                    throw new InvalidUserException("Passwords don' match");
+                }
+
                 send("User updated", output);
+
                 logger.info("Admin " + user.getName() + " updated user " + usertoUpdate.getName()
                     + " with role " + usertoUpdate.getRole());
+
                 if (usertoUpdate.getStatus().equals(User.Status.ONLINE)) {
-                    SideServer serverToShut = null;
                     for (SideServer server : Server.serverList) {
                         if (server.user.equals(usertoUpdate)) {
-                            serverToShut = server;
+                            exit("Your credentials updated", server, server.output);
                         }
                     }
-                    exit("Your credentials updated", serverToShut.user, serverToShut, output);
                 }
             } else {
                 send("User was banned", output);
             }
-        } catch (InvalidUserException ex) {
+        } catch (InvalidUserException | UserExistsException ex) {
             send(ex.getMessage(), output);
         }
     }

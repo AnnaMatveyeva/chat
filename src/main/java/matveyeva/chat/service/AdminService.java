@@ -2,9 +2,8 @@ package matveyeva.chat.service;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.util.Set;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.menu.RoomChangesMenu;
 import matveyeva.chat.menu.UserChangesMenu;
 import org.apache.log4j.Logger;
@@ -37,15 +36,14 @@ public class AdminService extends UserService {
         }
     }
 
-    public void userChangesMenu(BufferedWriter output, BufferedReader input, User user)
-        throws IOException {
-        UserChangesMenu userChangesMenu = new UserChangesMenu(output,input);
+    public void userChangesMenu(BufferedWriter output, BufferedReader input, User user) {
+        UserChangesMenu userChangesMenu = new UserChangesMenu(output, input);
         userChangesMenu.showMenu(user);
     }
 
 
     public void adminRoomMenu(BufferedWriter output, BufferedReader input, User user) {
-        RoomChangesMenu roomChangesMenu = new RoomChangesMenu(output,input);
+        RoomChangesMenu roomChangesMenu = new RoomChangesMenu(output, input);
         roomChangesMenu.showMenu(user);
     }
 

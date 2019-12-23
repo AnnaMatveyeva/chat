@@ -4,30 +4,36 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.List;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.Invitations;
-import matveyeva.chat.enums.Rooms;
 import matveyeva.chat.server.SideServer;
 import matveyeva.chat.service.AdminService;
 import org.apache.log4j.Logger;
 
-public class AdminMenu extends LoginMenu {
+public class AdminMenu implements Menu{
 
     private static final org.apache.log4j.Logger logger = Logger.getLogger(LoginMenu.class);
     private AdminService adminService = AdminService.getInstance();
+    protected BufferedReader input;
+    protected BufferedWriter output;
+    protected volatile List<Message> privateMessages;
+    protected SideServer thisSide;
 
     public AdminMenu(BufferedReader input, BufferedWriter output,
         List<Message> privateMessages, SideServer thisSide) {
-        super(input, output, privateMessages, thisSide);
+        this.input = input;
+        this.output = output;
+        this.privateMessages = privateMessages;
+        this.thisSide = thisSide;
     }
 
     @Override
     public void showMenu(User user) {
         try {
-            boolean check = false;
+            boolean checkIfExit = false;
 
-            while (!check) {
+            while (!checkIfExit) {
                 if (thisSide.isInterrupted()) {
                     break;
                 }
@@ -73,19 +79,21 @@ public class AdminMenu extends LoginMenu {
                         adminService.adminRoomMenu(output, input, user);
                         break;
                     case 11:
-                        adminService.exit("You logged off", user, thisSide, output);
-                        check = true;
+                        adminService.exit("You logged off", thisSide, output);
+                        checkIfExit = true;
                         break;
                     case 12:
-                        adminService.exit("Exit from application", user, thisSide, output);
-                        check = true;
+                        adminService.exit("Exit from application", thisSide, output);
+                        checkIfExit = true;
                         break;
                 }
             }
 
 
-        } catch (IOException | NumberFormatException e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            adminService.send("Something went wrong, try again", output);
+        }catch (NumberFormatException ex){
+            adminService.send("Wrong input, try again", output);
         }
     }
 

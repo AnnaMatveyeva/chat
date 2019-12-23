@@ -8,18 +8,21 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.Set;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.User;
 
 public enum UserDB {
     INSTANCE;
 
-    public Set<User> users = new HashSet<>();
+    public Set<User> users;
 
-    UserDB() {
-        try {
-            loadUsers();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void init() {
+        if (users == null) {
+            users = new HashSet<>();
+            try {
+                loadUsers();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

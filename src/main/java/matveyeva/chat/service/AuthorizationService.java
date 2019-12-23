@@ -4,12 +4,11 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.List;
-import matveyeva.chat.Entity.Invitation;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
+import matveyeva.chat.entity.User.Status;
 import matveyeva.chat.exception.InvalidUserException;
+import matveyeva.chat.exception.UserExistsException;
 import matveyeva.chat.menu.AdminMenu;
 import matveyeva.chat.menu.UserMenu;
 import matveyeva.chat.server.Server;
@@ -31,40 +30,50 @@ public class AuthorizationService extends DefaultService {
 
 
     public void login(BufferedReader input, BufferedWriter output,
-        User user, List<Message> publicMessagesList,
-        List<Message> privateMessages, SideServer thisSide) {
+        User user, List<Message> privateMessages, SideServer thisSide) {
         try {
-            send("Enter username,password", output);
-            String namePass = input.readLine();
-            user = login(namePass, user, output);
-            user.setStatus(User.Status.ONLINE);
-            thisSide.user = user;
-            crud.setUserStatus(user);
-            if (user.getRole().equalsIgnoreCase("USER")) {
-                logger.info("User " + user.getName() + " logged in");
-                UserMenu userMenu = new UserMenu(input, output, privateMessages,
-                    thisSide);
-                userMenu.showMenu(user);
-            } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
-                logger.info("Admin " + user.getName() + " logged in");
-                AdminMenu adminMenu = new AdminMenu(input, output,
-                    privateMessages, thisSide);
-                adminMenu.showMenu(user);
+            send("Enter username", output);
+            String username = input.readLine();
+            send("Enter password", output);
+            String password = input.readLine();
 
-            }
+            user = login(username, password, user);
+
+            if(user != null){
+                user.setStatus(User.Status.ONLINE);
+                thisSide.user = user;
+                crud.setUserStatus(user);
+                if (user.getRole().equalsIgnoreCase("USER")) {
+                    logger.info("User " + user.getName() + " logged in");
+                    UserMenu userMenu = new UserMenu(input, output, privateMessages,
+                        thisSide);
+                    userMenu.showMenu(user);
+                } else if (user.getRole().equalsIgnoreCase("ADMIN")) {
+                    logger.info("Admin " + user.getName() + " logged in");
+                    AdminMenu adminMenu = new AdminMenu(input, output,
+                        privateMessages, thisSide);
+                    adminMenu.showMenu(user);
+
+                }
+            }else send("User is banned", output);
         } catch (IOException ex) {
-
-        } catch (
-            InvalidUserException e) {
+            ex.printStackTrace();
+            send("Something went wrong, try again", output);
+        } catch (InvalidUserException e) {
             send(e.getMessage(), output);
         }
 
     }
 
-    public User login(String namePass, User user, BufferedWriter output)
-        throws InvalidUserException {
+    public User login(String userName, String password,User user) throws InvalidUserException{
 
-        user = crud.findOne(namePass);
+        user = crud.findByName(userName);
+        if(user == null){
+            throw new InvalidUserException("Wrong username");
+        }
+        if(!user.getPassword().equals(password)){
+            throw new InvalidUserException("Wrong password");
+        }
         if (user.getStatus() != Status.BANNED) {
             try {
                 for (SideServer server : Server.serverList) {
@@ -85,9 +94,15 @@ public class AuthorizationService extends DefaultService {
     public void registration(BufferedReader input, BufferedWriter output,
         User user, List<Message> privateMessages, SideServer thisSide) {
         try {
-            send("Create new  username,password", output);
-            String newUser = input.readLine();
-            user = registration(newUser);
+            send("Create new username", output);
+            String userName = input.readLine();
+            send("Create new password", output);
+            String userPassword = input.readLine();
+            send("Confirm password", output);
+            String confirmPassword = input.readLine();
+
+            user = registration(userName, userPassword, confirmPassword);
+
             user.setStatus(User.Status.ONLINE);
             crud.setUserStatus(user);
             thisSide.user = user;
@@ -105,15 +120,20 @@ public class AuthorizationService extends DefaultService {
             }
 
         } catch (IOException ex) {
-
-        } catch (InvalidUserException e) {
+            send("Something went wrong, try again", output);
+        } catch (InvalidUserException | UserExistsException e) {
             send(e.getMessage(), output);
         }
 
     }
 
-    public User registration(String newUser) throws InvalidUserException {
-        return crud.create(newUser);
+    public User registration(String username, String userPassword, String confirmPassword)
+        throws InvalidUserException, UserExistsException {
+        if (userPassword.equals(confirmPassword)) {
+            return crud.create(username, userPassword);
+        } else {
+            throw new InvalidUserException("Passwords don't match");
+        }
     }
 
 

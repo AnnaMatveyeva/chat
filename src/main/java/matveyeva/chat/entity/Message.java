@@ -1,4 +1,4 @@
-package matveyeva.chat.Entity;
+package matveyeva.chat.entity;
 
 import java.time.LocalDate;
 import java.time.LocalTime;

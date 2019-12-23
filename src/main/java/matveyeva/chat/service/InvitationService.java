@@ -7,16 +7,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import matveyeva.chat.Entity.Invitation;
-import matveyeva.chat.Entity.Room;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
+import matveyeva.chat.entity.Invitation;
+import matveyeva.chat.entity.Room;
+import matveyeva.chat.entity.User;
+import matveyeva.chat.entity.User.Status;
 import matveyeva.chat.enums.Invitations;
 import matveyeva.chat.enums.Rooms;
 import matveyeva.chat.exception.InvalidUserException;
 import org.apache.log4j.Logger;
 
-public class InvitationService extends DefaultService{
+public class InvitationService extends DefaultService {
 
     private static final Logger logger = Logger.getLogger(InvitationService.class);
 
@@ -43,17 +43,17 @@ public class InvitationService extends DefaultService{
                 if (userInvitations.isEmpty()) {
                     check = true;
                 }
-                StringBuilder str = new StringBuilder();
+                StringBuilder invs = new StringBuilder();
                 Map<String, Invitation> iMap = new HashMap<>();
                 for (int i = 0; i < userInvitations.size(); i++) {
-                    str.append(
+                    invs.append(
                         "to " + userInvitations.get(i).getRoom().getTitle() + " from "
                             + userInvitations
                             .get(i)
                             .getFromWho().getName() + "; ");
                     iMap.put(String.valueOf(i + 1), userInvitations.get(i));
                 }
-                send(str.toString(), output);
+                send(invs.toString(), output);
                 String answer = input.readLine();
 
                 if (answer.equalsIgnoreCase("exit")) {
@@ -95,29 +95,28 @@ public class InvitationService extends DefaultService{
         send("Enter user name", output);
         String username = input.readLine();
         User usertoInvite;
-        try {
-            usertoInvite = crud.findByName(username);
-            if (usertoInvite.getStatus().equals(Status.ONLINE)) {
-                Room r = null;
-                send("Enter room title", output);
-                String title = input.readLine();
-                for (Room room : Rooms.INSTANCE.getRoomsList()) {
-                    if (room.getTitle().equals(title)) {
-                        r = room;
-                        sendInvitation(user, usertoInvite, r);
-                        send("User was invited", output);
-                        break;
-                    }
+        usertoInvite = crud.findByName(username);
+        if (usertoInvite == null) {
+            send("User not found", output);
+        } else if (usertoInvite.getStatus().equals(Status.ONLINE)) {
+            Room r = null;
+            send("Enter room title", output);
+            String title = input.readLine();
+            for (Room room : Rooms.INSTANCE.getRoomsList()) {
+                if (room.getTitle().equals(title)) {
+                    r = room;
+                    sendInvitation(user, usertoInvite, r);
+                    send("User was invited", output);
+                    break;
                 }
-                if (r == null) {
-                    send("Room not found", output);
-                }
-            } else {
-                send("User are not online", output);
             }
-        } catch (InvalidUserException ex) {
-            send(ex.getMessage(), output);
+            if (r == null) {
+                send("Room not found", output);
+            }
+        } else {
+            send("User are not online", output);
         }
+
     }
 
     public void sendInvitation(User fromWho, User toWho, Room room) {

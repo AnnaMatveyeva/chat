@@ -3,17 +3,15 @@ package matveyeva.chat.service;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.Room;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.Rooms;
 import org.apache.log4j.Logger;
 
 public class RoomChangesService extends DefaultService {
 
-
     private static final Logger logger = Logger.getLogger(RoomChangesService.class);
-
     private static RoomChangesService instance;
 
     public static RoomChangesService getInstance() {

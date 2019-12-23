@@ -8,15 +8,16 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.UserDB;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.menu.LoginMenu;
 
 public class SideServer extends Thread {
 
     private Socket socket;
     private BufferedReader input;
-    private BufferedWriter output;
+    public BufferedWriter output;
     public User user;
     public volatile List<Message> privateMessages;
 
@@ -36,7 +37,7 @@ public class SideServer extends Thread {
     @Override
     public void run() {
         while (true) {
-
+            UserDB.INSTANCE.init();
             LoginMenu loginMenu = new LoginMenu(input, output,privateMessages, this);
             loginMenu.showMenu(user);
         }
@@ -68,7 +69,7 @@ public class SideServer extends Thread {
             output.write(msg + "\n");
             output.flush();
         } catch (IOException ex) {
-
+            System.out.println(ex.getMessage());
         }
     }
 }

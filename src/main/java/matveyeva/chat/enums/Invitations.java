@@ -2,8 +2,8 @@ package matveyeva.chat.enums;
 
 import java.util.ArrayList;
 import java.util.List;
-import matveyeva.chat.Entity.Invitation;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.Invitation;
+import matveyeva.chat.entity.User;
 
 public enum Invitations {
     INSTANCE;

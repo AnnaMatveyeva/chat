@@ -2,8 +2,8 @@ package matveyeva.chat.service;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
+import matveyeva.chat.entity.User;
+import matveyeva.chat.entity.User.Status;
 import matveyeva.chat.UserCrud;
 import matveyeva.chat.server.SideServer;
 import org.apache.log4j.Logger;
@@ -18,19 +18,19 @@ public class DefaultService {
             output.write(msg + "\n");
             output.flush();
         } catch (IOException ex) {
-
+            System.out.println("Something went wrong, try again");
         }
     }
 
-    public void exit(String message, User user, SideServer thisSide, BufferedWriter output)
+    public void exit(String message, SideServer thisSide, BufferedWriter output)
         throws IOException {
-        if (user != null && !user.getStatus().equals(Status.BANNED)) {
-            user.setStatus(User.Status.OFFLINE);
-            crud.setUserStatus(user);
-            logger.info("User " + user.getName() + " logged off");
+        if (thisSide.user != null && !thisSide.user.getStatus().equals(Status.BANNED)) {
+            thisSide.user.setStatus(User.Status.OFFLINE);
+            crud.setUserStatus(thisSide.user);
+            logger.info("User " + thisSide.user.getName() + " logged off");
         }
         crud.reloadUsers();
-        user = null;
+        thisSide.user = null;
         if (message.equalsIgnoreCase("Exit from application") || message.contains("deleted")
             || message.contains("admin") || message.contains("banned") || message
             .contains("updated")) {

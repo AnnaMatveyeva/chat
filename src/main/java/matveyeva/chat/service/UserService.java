@@ -7,10 +7,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.User;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.PublicMessages;
-import matveyeva.chat.exception.InvalidUserException;
 import matveyeva.chat.menu.RoomMenu;
 import matveyeva.chat.server.Server;
 import matveyeva.chat.server.SideServer;
@@ -62,7 +61,7 @@ public class UserService extends DefaultService {
     }
 
     public void showRoomMenu(BufferedWriter output, BufferedReader input, User user) {
-        RoomMenu roomMenu = new RoomMenu(output,input);
+        RoomMenu roomMenu = new RoomMenu(output, input);
         roomMenu.showMenu(user);
     }
 
@@ -70,13 +69,13 @@ public class UserService extends DefaultService {
         send("Enter username", output);
         String name = input.readLine();
         User user;
-        try {
-            user = crud.findByName(name);
+        user = crud.findByName(name);
+        if (user != null) {
             send(user.getName() + " is " + user.getStatus(), output);
-
-        } catch (InvalidUserException e) {
-            send(e.getMessage(), output);
+        } else {
+            send("User not found", output);
         }
+
     }
 
     public void showConnectedUsers(BufferedWriter output, User user) {
@@ -100,14 +99,15 @@ public class UserService extends DefaultService {
         try {
             String username = input.readLine();
             friend = crud.findByName(username);
-            if (friend.getStatus().equals(User.Status.ONLINE)) {
+            if (friend == null) {
+                send("User not found", output);
+            } else if (friend.getStatus().equals(User.Status.ONLINE)) {
                 toPrivateChat(friend, user, output, input, privateMessages);
             } else {
                 send(friend.getName() + " is not online", output);
             }
-        } catch (InvalidUserException ex) {
-            send(ex.getMessage(), output);
         } catch (IOException e) {
+            send("Something went wrong, try again", output);
         }
     }
 
@@ -191,7 +191,7 @@ public class UserService extends DefaultService {
 
     public void showInvitations(BufferedWriter output, BufferedReader input, User user) {
         try {
-            InvitationService.getInstance().showInvitations(output,input,user);
+            InvitationService.getInstance().showInvitations(output, input, user);
         } catch (IOException e) {
             e.printStackTrace();
         }

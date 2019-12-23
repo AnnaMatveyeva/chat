@@ -1,4 +1,4 @@
-package matveyeva.chat.Entity;
+package matveyeva.chat.entity;
 
 import java.util.ArrayList;
 import java.util.HashSet;

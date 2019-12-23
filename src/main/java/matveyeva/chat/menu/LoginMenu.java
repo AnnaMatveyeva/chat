@@ -4,9 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.List;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.enums.PublicMessages;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.server.SideServer;
 import matveyeva.chat.service.AuthorizationService;
 import org.apache.log4j.Logger;
@@ -31,8 +30,8 @@ public class LoginMenu implements Menu {
     }
 
     public void showMenu(User user) {
-        boolean check = false;
-        while (!check) {
+        boolean checkIfExit = false;
+        while (!checkIfExit) {
             try {
                 if (thisSide.isInterrupted()) {
                     break;
@@ -41,21 +40,20 @@ public class LoginMenu implements Menu {
                 String answer = input.readLine();
                 switch (Integer.parseInt(answer)) {
                     case 1:
-                        authService.login(input, output, user,
-                            PublicMessages.INSTANCE.getPublicMessages(), privateMessages,
-                            thisSide);
+                        authService.login(input, output, user, privateMessages, thisSide);
                         break;
                     case 2:
                         authService.registration(input, output, user, privateMessages, thisSide);
                         break;
                     case 3:
-                        authService.exit("Exit from application", user, thisSide, output);
-                        check = true;
+                        authService.exit("Exit from application",thisSide, output);
+                        checkIfExit = true;
                         break;
                 }
             } catch (NumberFormatException ex) {
-
+                authService.send("Wrong input, try again", output);
             } catch (IOException ex) {
+                authService.send("Something went wrong, try again", output);
             }
         }
     }

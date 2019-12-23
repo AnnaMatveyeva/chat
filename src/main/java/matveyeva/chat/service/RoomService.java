@@ -7,14 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import matveyeva.chat.Entity.Invitation;
-import matveyeva.chat.Entity.Message;
-import matveyeva.chat.Entity.Room;
-import matveyeva.chat.Entity.User;
-import matveyeva.chat.Entity.User.Status;
-import matveyeva.chat.enums.Invitations;
+import matveyeva.chat.entity.Message;
+import matveyeva.chat.entity.Room;
+import matveyeva.chat.entity.User;
 import matveyeva.chat.enums.Rooms;
-import matveyeva.chat.exception.InvalidUserException;
 import org.apache.log4j.Logger;
 
 public class RoomService extends DefaultService{
